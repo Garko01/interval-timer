@@ -142,16 +142,43 @@ export function cueEndLong() {
 }
 
 // --- Wake Lock ---
-let wakeLock: any
+let wakeLock: any | null = null;
+let visibilityHandler: (() => void) | null = null;
+
 export async function requestWakeLock(enabled: boolean) {
   try {
-    if (enabled && 'wakeLock' in navigator) {
-      wakeLock = await (navigator as any).wakeLock.request('screen')
-      wakeLock?.addEventListener?.('release', () => {})
-    } else {
-      await wakeLock?.release?.()
+    // If turning OFF
+    if (!enabled) {
+      if (visibilityHandler) {
+        document.removeEventListener('visibilitychange', visibilityHandler);
+        visibilityHandler = null;
+      }
+      await wakeLock?.release?.();
+      wakeLock = null;
+      return false;
     }
-  } catch {}
+
+    // Turning ON
+    if (!('wakeLock' in navigator)) return false; // unsupported (iOS Safari < 16.4, some desktop browsers)
+
+    // Request (or re-request) the screen lock
+    wakeLock = await (navigator as any).wakeLock.request('screen');
+
+    // Re-acquire when tab becomes visible again
+    visibilityHandler ??= async () => {
+      if (document.visibilityState === 'visible' && (!wakeLock || wakeLock.released)) {
+        try { wakeLock = await (navigator as any).wakeLock.request('screen'); } catch {}
+      }
+    };
+    document.addEventListener('visibilitychange', visibilityHandler);
+
+    // Optional: observe releases
+    wakeLock.addEventListener?.('release', () => { /* you could log here */ });
+
+    return true;
+  } catch {
+    return false; // permission denied or user gesture missing
+  }
 }
 
 // --- Notifications ---

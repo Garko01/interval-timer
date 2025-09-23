@@ -60,7 +60,7 @@ button{font:inherit}
   flex-direction:column;
   align-items:center;
   justify-content:center;
-  margin-bottom: 24px;
+  margin-bottom: 0px;
 }
 
 .roundLabel{

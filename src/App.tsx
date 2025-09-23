@@ -186,6 +186,12 @@ export default function App() {
   }
   const round = useMemo(() => getRoundForIndex(schedule, idx, settings), [schedule, idx, settings])
 
+  // keep screen awake follows 'running' and the toggle
+  useEffect(() => {
+    requestWakeLock(settings.wakeLock && running);
+    return () => { requestWakeLock(false); }; // cleanup on unmount
+  }, [settings.wakeLock, running]);
+
   // When interval changes, reset countdown flags and baseline
   useEffect(() => {
     played3Ref.current = false
@@ -267,7 +273,6 @@ export default function App() {
     lastTs.current = null
     // No separate 3-2-1 here; countdown plays at end of each interval.
     setRunning(true)
-    if (settings.wakeLock) requestWakeLock(true)
   }
 
   function pause() {
@@ -400,7 +405,6 @@ function SettingsModal({ settings, onChange, onClose }:
             <h4>Power</h4>
             <div className="row"><label className="label" style={{ width: 140 }}>Keep screen awake</label><input type="checkbox" checked={local.wakeLock} onChange={e => setLocal({ ...local, wakeLock: e.target.checked })} /></div>
             <div className="row"><label className="label" style={{ width: 140 }}>Finish notification</label><input type="checkbox" checked={local.notifications.finish} onChange={e => setLocal({ ...local, notifications: { ...local.notifications, finish: e.target.checked } })} /></div>
-            <div className="row"><label className="label" style={{ width: 140 }}>Per-interval notifications</label><input type="checkbox" checked={local.notifications.perInterval} disabled onChange={() => { }} /></div>
           </section>
         </div>
         <div className="modalFooter">
