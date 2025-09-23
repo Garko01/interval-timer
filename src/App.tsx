@@ -1,0 +1,428 @@
+// usage:
+// cd interval-timer
+//cd npm run dev
+
+import { useEffect, useMemo, useRef, useState } from "react";
+import { FaPlay, FaPause, FaRedo, FaCog } from "react-icons/fa";
+
+import {
+  DEFAULT_SETTINGS, buildSchedule, formatMMSS, requestWakeLock,
+  countdownPip3, countdownPip2, countdownPip1,
+  cueWorkStart, cueRestStart, cueEndLong,
+  sendFinishNotification, PALETTE
+} from './timer'
+import type { Settings, IntervalDef } from './timer'
+
+function useLocalStorage<T>(key: string, initial: T) {
+  const [state, setState] = useState<T>(() => {
+    try {
+      const raw = localStorage.getItem(key)
+      return raw ? (JSON.parse(raw) as T) : initial
+    } catch {
+      return initial
+    }
+  })
+  useEffect(() => {
+    try { localStorage.setItem(key, JSON.stringify(state)) } catch {}
+  }, [key, state])
+  return [state, setState] as const
+}
+
+function useFullscreen() {
+  const enter = () => document.documentElement.requestFullscreen?.()
+  const exit = () => document.exitFullscreen?.()
+  const [isFS, setFS] = useState(!!document.fullscreenElement)
+  useEffect(() => {
+    const on = () => setFS(!!document.fullscreenElement)
+    document.addEventListener('fullscreenchange', on)
+    return () => document.removeEventListener('fullscreenchange', on)
+  }, [])
+  return { isFS, enter, exit }
+}
+
+function getRoundForIndex(schedule: IntervalDef[], idx: number, s: Settings) {
+  let workCount = 0
+  for (let i = 0; i <= idx && i < schedule.length; i++) {
+    if (schedule[i].type === 'work') workCount++
+  }
+  const round = Math.min(Math.max(1, workCount), s.rounds)
+  return round
+}
+
+// Auto-fit digits with exact pixel padding so we never overflow the viewport.
+function useAutoFitDigits(config?: { sidePadEachVW?: number }) {
+  // visual margin per side (in vw units)
+  const sidePadEachVW = config?.sidePadEachVW ?? 4; // e.g., 4vw each side
+
+  const wrapRef = useRef<HTMLDivElement | null>(null);
+  const ghostRef = useRef<HTMLSpanElement | null>(null);
+
+  useEffect(() => {
+    if (!wrapRef.current || !ghostRef.current) return;
+
+  const compute = () => {
+    requestAnimationFrame(() => {
+      const el = wrapRef.current;
+      const ghost = ghostRef.current;
+      if (!el || !ghost) return;
+
+      const vw = Math.max(320, document.documentElement.clientWidth || window.innerWidth);
+      const vh = Math.max(320, document.documentElement.clientHeight || window.innerHeight);
+      const isPortrait = vh >= vw;
+      const isMobile   = vw < 768;
+      const isTablet   = vw >= 768 && vw < 1200;
+      const isDesktop  = vw >= 1200;
+
+      // Baseline container constraints
+      el.style.width = '100%';
+      el.style.boxSizing = 'border-box';
+      el.style.margin = '0 auto';
+      el.style.maxWidth = '100%';
+      el.style.overflowX = 'hidden';
+
+      // Helper: measure ghost width at 100px
+      const measureGhost = () => {
+        const prevFS = ghost.style.fontSize;
+        ghost.style.fontSize = '100px';
+        const w = Math.max(1, ghost.getBoundingClientRect().width);
+        ghost.style.fontSize = prevFS;
+        return w;
+      };
+
+      const ghostW100 = measureGhost();
+
+      // ===== MOBILE (fit to actual container) =====
+      if (isMobile) {
+        // real container width (includes its padding)
+        const containerW = el.clientWidth || vw;
+
+        // symmetric side padding in *pixels* (a bit smaller on tiny phones)
+        const padPx =
+          Math.round((containerW * (vw < 420 ? 0.025 : 0.035))) + 2; // +2px safety
+
+        // expose it to CSS so both sides are *exactly* equal
+        el.style.setProperty('--digits-pad', `${padPx}px`);
+
+        // width fit using *container* width, not viewport width
+        const usableW   = Math.max(1, containerW - padPx * 2);
+        const sizeFromW = (100 * usableW * 0.985) / ghostW100; // tiny right-edge margin
+        const sizeFromH = isPortrait ? vh * 0.34 : vh * 0.45;
+
+        const initialPx = Math.max(48, Math.min(sizeFromW, sizeFromH, 720));
+        el.style.setProperty('--digit-size', `${Math.round(initialPx)}px`);
+
+        // verify after paint; if still a hair wide, shrink once
+        requestAnimationFrame(() => {
+          const valueEl = el.querySelector('.value') as HTMLElement | null;
+          if (!valueEl) return;
+          const valueW = valueEl.getBoundingClientRect().width;
+          if (valueW > usableW) {
+            const scale = (usableW / valueW) * 0.985;
+            el.style.setProperty('--digit-size',
+              `${Math.max(48, Math.floor(initialPx * scale))}px`);
+          }
+        });
+        return;
+      }
+
+      // ===== TABLET / DESKTOP (keep larger look) =====
+      const sidePadVW = isDesktop ? 1.5 : isTablet ? 2.0 : 3.0;
+      const padPx = (sidePadVW / 100) * vw;
+      el.style.paddingLeft  = `${padPx}px`;
+      el.style.paddingRight = `${padPx}px`;
+
+      const usableW   = Math.max(1, vw - padPx * 2);
+      const sizeFromW = (100 * usableW * 0.99) / ghostW100; // tiny margin
+      const sizeFromH = isDesktop ? vh * 0.62 : isTablet ? vh * 0.52 : vh * 0.46;
+
+      const hardCap = isDesktop ? 960 : 780;
+      const sizePx = Math.max(48, Math.min(sizeFromW, sizeFromH, hardCap));
+      el.style.setProperty('--digit-size', `${Math.round(sizePx)}px`);
+    });
+  };
+
+
+    const ro = new ResizeObserver(compute);
+    ro.observe(wrapRef.current!);
+    window.addEventListener('resize', compute);
+    window.addEventListener('orientationchange', compute);
+    compute();
+
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', compute);
+      window.removeEventListener('orientationchange', compute);
+    };
+  }, [sidePadEachVW]);
+
+  return { wrapRef, ghostRef };
+}
+
+export default function App() {
+  const [settings, setSettings] = useLocalStorage<Settings>('itimer.settings', DEFAULT_SETTINGS)
+  const schedule = useMemo(() => buildSchedule(settings), [settings])
+
+  const [idx, setIdx] = useState(0)
+  const [remaining, setRemaining] = useState(schedule[0]?.seconds ?? settings.workSeconds)
+  const [running, setRunning] = useState(false)
+  const [done, setDone] = useState(false)
+
+  const rafRef = useRef<number | null>(null)
+  const lastTs = useRef<number | null>(null)
+
+  const [showSettings, setShowSettings] = useState(true)
+
+  // countdown-at-end refs
+  const prevRemainingRef = useRef<number | null>(null)
+  const played3Ref = useRef(false)
+  const played2Ref = useRef(false)
+  const played1Ref = useRef(false)
+
+  const current: IntervalDef = schedule[idx] ?? {
+    type: 'work',
+    name: 'WORK',
+    seconds: settings.workSeconds,
+    color: PALETTE.work,
+  }
+  const round = useMemo(() => getRoundForIndex(schedule, idx, settings), [schedule, idx, settings])
+
+  // When interval changes, reset countdown flags and baseline
+  useEffect(() => {
+    played3Ref.current = false
+    played2Ref.current = false
+    played1Ref.current = false
+    prevRemainingRef.current = current.seconds
+  }, [current.seconds])
+
+  // Keep remaining in sync when interval changes
+  useEffect(() => { setRemaining(current.seconds) }, [current.seconds])
+
+  // Tick loop with T-3 / T-2 / T-1 pips
+  useEffect(() => {
+    if (!running) return
+
+    function tick(ts: number) {
+      if (lastTs.current === null) lastTs.current = ts
+      const dt = (ts - lastTs.current) / 1000
+      lastTs.current = ts
+
+      setRemaining(prev => {
+        const prevVal = prevRemainingRef.current ?? prev
+        const next = Math.max(0, prev - dt)
+
+        // countdown pips in last 3 seconds of CURRENT interval
+        if (!settings.mute && settings.precount321) {
+          if (!played3Ref.current && prevVal > 3 && next <= 3) { countdownPip3(); played3Ref.current = true }
+          if (!played2Ref.current && prevVal > 2 && next <= 2) { countdownPip2(); played2Ref.current = true }
+          if (!played1Ref.current && prevVal > 1 && next <= 1) { countdownPip1(); played1Ref.current = true }
+        }
+
+        prevRemainingRef.current = next
+
+        if (next === 0) {
+          goToNextInterval();
+          return 0;
+        }
+        return next
+      })
+
+      rafRef.current = requestAnimationFrame(tick)
+    }
+
+    rafRef.current = requestAnimationFrame(tick)
+    return () => { if (rafRef.current !== null) cancelAnimationFrame(rafRef.current) }
+  }, [running, settings.mute, settings.precount321])
+
+  const idxRef = useRef(0);
+  useEffect(() => { idxRef.current = idx; }, [idx]);
+
+  function goToNextInterval() {
+    const nextIndex = idxRef.current + 1;
+
+    // Finished
+    if (nextIndex >= schedule.length) {
+      setDone(true);
+      if (settings.notifications.finish) sendFinishNotification('Interval Timer');
+      if (!settings.mute) cueEndLong();
+      setRunning(false);
+      return;
+    }
+
+    // Move index & seconds together (single frame)
+    const nextSecs = schedule[nextIndex].seconds;
+    setIdx(nextIndex);
+    setRemaining(nextSecs);
+    prevRemainingRef.current = nextSecs;
+    played3Ref.current = played2Ref.current = played1Ref.current = false;
+
+    // Start cue right on the boundary
+    if (!settings.mute) {
+      const t = schedule[nextIndex].type;
+      t === 'work' ? cueWorkStart() : cueRestStart();
+    }
+  }
+
+  function start() {
+    setDone(false)
+    lastTs.current = null
+    // No separate 3-2-1 here; countdown plays at end of each interval.
+    setRunning(true)
+    if (settings.wakeLock) requestWakeLock(true)
+  }
+
+  function pause() {
+    setRunning(false)
+    if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
+  }
+
+  function toggle() { running ? pause() : start() }
+
+  function restart() {
+    pause()
+    setIdx(0)
+    setRemaining(schedule[0]?.seconds ?? settings.workSeconds)
+    setDone(false)
+    lastTs.current = null
+    played3Ref.current = false
+    played2Ref.current = false
+    played1Ref.current = false
+    prevRemainingRef.current = schedule[0]?.seconds ?? settings.workSeconds
+  }
+
+  function resetToSettings(){
+    restart();              // stop + go back to first interval
+    setShowSettings(true);  // open Settings modal
+  }
+
+  const { isFS, enter, exit } = useFullscreen()
+
+  // Rebuild/restart if structural settings change
+  useEffect(() => {
+    restart()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    settings.rounds, settings.includeWarmup, settings.includeCooldown,
+    settings.warmupSeconds, settings.cooldownSeconds, settings.workSeconds, settings.restSeconds
+  ])
+
+  const { wrapRef, ghostRef } = useAutoFitDigits();
+
+  return (
+    <div className="container">
+      <div className="float-tr">
+        <button
+          className="circle iconbtn"
+          onClick={() => setShowSettings(true)}
+          title="Settings"
+          aria-label="Settings"
+        >
+          <FaCog />
+        </button>
+      </div>
+
+      <main className="main">
+        <div className="timerCard" style={{ borderColor: current.color }}>
+          <div className="labels">
+            <div className="roundLabel">Round {round} / {settings.rounds}</div>
+            <div className="intervalLabel" style={{ color: current.color }}>{current.name}</div>
+          </div>
+          
+          <div className="digits" ref={wrapRef}>
+            <span className="ghost" ref={ghostRef}>88:88</span>
+            <span className="value">{formatMMSS(Math.ceil(remaining))}</span>
+          </div>
+          <div className="controls">
+            <button
+              className="iconRound resetBtn"
+              onClick={resetToSettings}
+              aria-label="Reset and open settings"
+              title="Reset"
+            >
+              <FaRedo />
+            </button>
+
+            <button
+              className="iconRound"
+              onClick={toggle}
+              aria-label={running ? "Pause" : "Start"}
+              title={running ? "Pause" : "Start"}
+            >
+              {running ? <FaPause /> : <FaPlay />}
+            </button>
+          </div>
+        </div>
+      </main>
+
+      <div className="float-br">
+        <button className="circle iconbtn" onClick={() => isFS ? exit() : enter()} title={isFS ? 'Exit Fullscreen' : 'Enter Fullscreen'}>⛶</button>
+      </div>
+
+      {showSettings && (
+        <SettingsModal settings={settings} onClose={() => setShowSettings(false)} onChange={setSettings} />
+      )}
+    </div>
+  )
+}
+
+function SettingsModal({ settings, onChange, onClose }:
+  { settings: Settings; onChange: (s: Settings | ((p: Settings) => Settings)) => void; onClose: () => void }) {
+
+  const [local, setLocal] = useState<Settings>(settings)
+  useEffect(() => setLocal(settings), [settings])
+  function save() { onChange(local); onClose() }
+
+  return (
+    <div className="modal" role="dialog" aria-modal="true">
+      <div className="modalCard">
+        <div className="modalHeader"><h3>Timer Settings</h3><button className="iconbtn" onClick={onClose}>✖</button></div>
+        <div className="modalBody">
+          <section>
+            <h4>Structure</h4>
+            <div className="row"><label className="label" style={{ width: 140 }}>Rounds</label><input className="input" type="number" min={1} max={100} value={local.rounds} onChange={e => setLocal({ ...local, rounds: clamp(+e.target.value, 1, 100) })} /></div>
+            <div className="row"><label className="label" style={{ width: 140 }}>Include Warmup</label><input type="checkbox" checked={local.includeWarmup} onChange={e => setLocal({ ...local, includeWarmup: e.target.checked })} /></div>
+            <div className="row"><label className="label" style={{ width: 140 }}>Warmup (mm:ss)</label><MmSsInput value={local.warmupSeconds} onChange={v => setLocal({ ...local, warmupSeconds: v })} disabled={!local.includeWarmup} /></div>
+            <div className="row"><label className="label" style={{ width: 140 }}>Include Cooldown</label><input type="checkbox" checked={local.includeCooldown} onChange={e => setLocal({ ...local, includeCooldown: e.target.checked })} /></div>
+            <div className="row"><label className="label" style={{ width: 140 }}>Cooldown (mm:ss)</label><MmSsInput value={local.cooldownSeconds} onChange={v => setLocal({ ...local, cooldownSeconds: v })} disabled={!local.includeCooldown} /></div>
+          </section>
+          <section>
+            <h4>Intervals</h4>
+            <div className="row"><label className="label" style={{ width: 140 }}>Work (mm:ss)</label><MmSsInput value={local.workSeconds} onChange={v => setLocal({ ...local, workSeconds: v })} /></div>
+            <div className="row"><label className="label" style={{ width: 140 }}>Rest (mm:ss)</label><MmSsInput value={local.restSeconds} onChange={v => setLocal({ ...local, restSeconds: v })} /></div>
+            <div className="row"><label className="label" style={{ width: 140 }}>Pre-count 3–2–1</label><input type="checkbox" checked={local.precount321} onChange={e => setLocal({ ...local, precount321: e.target.checked })} /></div>
+            <div className="row"><label className="label" style={{ width: 140 }}>Mute sounds</label><input type="checkbox" checked={local.mute} onChange={e => setLocal({ ...local, mute: e.target.checked })} /></div>
+          </section>
+          <section>
+            <h4>Power</h4>
+            <div className="row"><label className="label" style={{ width: 140 }}>Keep screen awake</label><input type="checkbox" checked={local.wakeLock} onChange={e => setLocal({ ...local, wakeLock: e.target.checked })} /></div>
+            <div className="row"><label className="label" style={{ width: 140 }}>Finish notification</label><input type="checkbox" checked={local.notifications.finish} onChange={e => setLocal({ ...local, notifications: { ...local.notifications, finish: e.target.checked } })} /></div>
+            <div className="row"><label className="label" style={{ width: 140 }}>Per-interval notifications</label><input type="checkbox" checked={local.notifications.perInterval} disabled onChange={() => { }} /></div>
+          </section>
+        </div>
+        <div className="modalFooter">
+          <button className="iconbtn" onClick={onClose}>Cancel</button>
+          <button className="iconbtn" style={{ marginLeft: 8 }} onClick={save}>Save</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function clamp(n: number, min: number, max: number) { return Math.max(min, Math.min(max, n)) }
+
+function MmSsInput({ value, onChange, disabled }: { value: number; onChange: (v: number) => void; disabled?: boolean }) {
+  const m = Math.floor(value / 60)
+  const s = value % 60
+  const [mm, setMM] = useState(m)
+  const [ss, setSS] = useState(s)
+  useEffect(() => { setMM(Math.floor(value / 60)); setSS(value % 60) }, [value])
+  useEffect(() => { onChange(clamp(mm, 0, 59) * 60 + clamp(ss, 0, 59)) }, [mm, ss])
+
+  return (
+    <div className="mmss">
+      <input className="input" type="number" min={0} max={59} value={mm} disabled={disabled} onChange={e => setMM(+e.target.value)} />
+      <span>:</span>
+      <input className="input" type="number" min={0} max={59} value={ss} disabled={disabled} onChange={e => setSS(+e.target.value)} />
+    </div>
+  )
+}
+
