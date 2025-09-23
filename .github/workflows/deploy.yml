@@ -2,27 +2,35 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [ main ]   # or your default branch
-  workflow_dispatch:
+    branches: [ main ]  # deploy whenever you push to main
+  workflow_dispatch:    # and allow manual runs
 
 permissions:
   contents: read
   pages: write
   id-token: write
 
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
-      - run: npm ci
-      - run: npm run build
-      # Copy SPA fallback
+          cache: npm
+
+      - run: npm ci        # or: npm install (if you don't have a package-lock yet)
+      - run: npm run build # Vite -> outputs to dist
+
+      # SPA fallback so refresh on deep routes works (harmless if not using a router)
       - run: cp dist/index.html dist/404.html
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
