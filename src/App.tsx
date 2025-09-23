@@ -309,6 +309,11 @@ export default function App() {
 
   return (
     <div className="container">
+      {/* assistive-only announcement */}
+      <span className="sr-only" aria-live="polite">
+        {done ? 'Workout complete' : ''}
+      </span>
+      
       <div className="float-tr">
         <button
           className="circle iconbtn"
