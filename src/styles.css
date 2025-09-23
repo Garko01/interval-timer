@@ -135,6 +135,26 @@ html, body, .container, .main { overflow-x: hidden; }
   font-size: 22px;
 }
 .iconRound:hover { background: #263041 }
+
+.iconRound.mainAction {
+  width: auto;
+  min-width: 120px;
+  height: 56px;
+  padding-inline: 2rem;
+  border-radius: 9999px;
+  font-size: 24px;
+  justify-content: center;
+}
+
+.iconRound.resetBtn {
+  background: var(--card);
+  color: var(--ink);
+  border-color: #3a3f49;
+}
+.iconRound.resetBtn:hover {
+  background: var(--muted);
+}
+
 .resetBtn { border-color: #3a3f49 }
 
 .float-br{position:fixed;right:16px;bottom:16px}

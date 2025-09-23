@@ -294,9 +294,9 @@ export default function App() {
     prevRemainingRef.current = schedule[0]?.seconds ?? settings.workSeconds
   }
 
-  function resetToSettings(){
-    restart();              // stop + go back to first interval
-    setShowSettings(true);  // open Settings modal
+  function resetSession() {
+    restart();
+    setShowSettings(false);
   }
 
   const { isFS, enter, exit } = useFullscreen()
@@ -344,15 +344,15 @@ export default function App() {
           <div className="controls">
             <button
               className="iconRound resetBtn"
-              onClick={resetToSettings}
-              aria-label="Reset and open settings"
+              onClick={resetSession}
+              aria-label="Reset settings"
               title="Reset"
             >
               <FaRedo />
             </button>
 
             <button
-              className="iconRound"
+              className="iconRound mainAction"
               onClick={toggle}
               aria-label={running ? "Pause" : "Start"}
               title={running ? "Pause" : "Start"}
