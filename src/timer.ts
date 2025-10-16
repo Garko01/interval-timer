@@ -86,7 +86,7 @@ function digitalBeep(opts: {
     freq,
     durationMs = 140,
     startAt = 0,
-    gain = 0.80,
+    gain = 5.0, // Increased gain for higher volume
     sweepToHz,
   } = opts
 
