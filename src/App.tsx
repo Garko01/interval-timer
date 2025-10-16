@@ -2,7 +2,16 @@
 // cd interval-timer
 //cd npm run dev
 
-import { useEffect, useMemo, useRef, useState, type FocusEvent, type MouseEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type FocusEvent,
+  type InputHTMLAttributes,
+  type MouseEvent,
+} from "react";
 import { FaPlay, FaPause, FaRedo, FaCog } from "react-icons/fa";
 
 import {
@@ -173,6 +182,124 @@ const handleNumericMouseUp = (e: MouseEvent<HTMLInputElement>) => {
 }
 const handleNumericBlur = (e: FocusEvent<HTMLInputElement>) => {
   delete e.currentTarget.dataset[selectFlag]
+}
+
+type NumberFieldProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange'> & {
+  value: number
+  onValueChange: (value: number) => void
+}
+
+function NumberField({
+  value,
+  onValueChange,
+  min,
+  max,
+  onBlur: onBlurProp,
+  onFocus: onFocusProp,
+  onMouseUp: onMouseUpProp,
+  type,
+  ...rest
+}: NumberFieldProps) {
+  const [draft, setDraft] = useState<string>(() => value.toString())
+  const [editing, setEditing] = useState(false)
+
+  useEffect(() => {
+    if (!editing) {
+      setDraft(value.toString())
+    }
+  }, [value, editing])
+
+  const minValue = typeof min === 'number' ? min : typeof min === 'string' && min !== '' ? Number(min) : undefined
+  const maxValue = typeof max === 'number' ? max : typeof max === 'string' && max !== '' ? Number(max) : undefined
+
+  const clampValue = (num: number) => {
+    let next = num
+    if (minValue !== undefined && next < minValue) next = minValue
+    if (maxValue !== undefined && next > maxValue) next = maxValue
+    return next
+  }
+
+  const commit = (nextDraft: string) => {
+    if (nextDraft === '') {
+      setDraft('')
+      return
+    }
+    const parsed = Number(nextDraft)
+    if (Number.isNaN(parsed)) {
+      setDraft(nextDraft)
+      return
+    }
+    const clamped = clampValue(parsed)
+    const clampedStr = clamped.toString()
+    setDraft(clampedStr)
+    if (clamped !== value) {
+      onValueChange(clamped)
+    }
+  }
+
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const next = e.target.value
+    if (next === '') {
+      setDraft('')
+      return
+    }
+
+    const parsed = Number(next)
+    if (Number.isNaN(parsed)) {
+      setDraft(next)
+      return
+    }
+
+    const clamped = clampValue(parsed)
+    if (clamped !== parsed) {
+      setDraft(clamped.toString())
+      if (clamped !== value) {
+        onValueChange(clamped)
+      }
+      return
+    }
+
+    setDraft(next)
+    if (parsed !== value) {
+      onValueChange(parsed)
+    }
+  }
+
+  const handleFocus = (e: FocusEvent<HTMLInputElement>) => {
+    setEditing(true)
+    handleNumericFocus(e)
+    onFocusProp?.(e)
+  }
+
+  const handleMouseUp = (e: MouseEvent<HTMLInputElement>) => {
+    handleNumericMouseUp(e)
+    onMouseUpProp?.(e)
+  }
+
+  const handleBlur = (e: FocusEvent<HTMLInputElement>) => {
+    setEditing(false)
+    if (draft === '') {
+      setDraft(value.toString())
+    } else {
+      commit(draft)
+    }
+    handleNumericBlur(e)
+    onBlurProp?.(e)
+  }
+
+  return (
+    <input
+      {...rest}
+      type={type ?? 'number'}
+      min={min}
+      max={max}
+      value={draft}
+      onChange={handleChange}
+      onFocus={handleFocus}
+      onMouseUp={handleMouseUp}
+      onBlur={handleBlur}
+    />
+  )
 }
 
 export default function App() {
@@ -405,7 +532,7 @@ function SettingsModal({ settings, onChange, onClose }:
         <div className="modalBody">
           <section>
             <h4>Structure</h4>
-            <div className="row"><label className="label" style={{ width: 140 }}>Rounds</label><input className="input" type="number" min={1} max={100} value={local.rounds} onChange={e => setLocal({ ...local, rounds: clamp(+e.target.value, 1, 100) })} onFocus={handleNumericFocus} onMouseUp={handleNumericMouseUp} onBlur={handleNumericBlur} /></div>
+            <div className="row"><label className="label" style={{ width: 140 }}>Rounds</label><NumberField className="input" min={1} max={100} value={local.rounds} onValueChange={value => setLocal({ ...local, rounds: value })} /></div>
             <div className="row"><label className="label" style={{ width: 140 }}>Include Warmup</label><input type="checkbox" checked={local.includeWarmup} onChange={e => setLocal({ ...local, includeWarmup: e.target.checked })} /></div>
             <div className="row"><label className="label" style={{ width: 140 }}>Warmup (mm:ss)</label><MmSsInput value={local.warmupSeconds} onChange={v => setLocal({ ...local, warmupSeconds: v })} disabled={!local.includeWarmup} /></div>
             <div className="row"><label className="label" style={{ width: 140 }}>Include Cooldown</label><input type="checkbox" checked={local.includeCooldown} onChange={e => setLocal({ ...local, includeCooldown: e.target.checked })} /></div>
@@ -445,9 +572,9 @@ function MmSsInput({ value, onChange, disabled }: { value: number; onChange: (v:
 
   return (
     <div className="mmss">
-      <input className="input" type="number" min={0} max={59} value={mm} disabled={disabled} onChange={e => setMM(+e.target.value)} onFocus={handleNumericFocus} onMouseUp={handleNumericMouseUp} onBlur={handleNumericBlur} />
+      <NumberField className="input" min={0} max={59} value={mm} disabled={disabled} onValueChange={setMM} />
       <span>:</span>
-      <input className="input" type="number" min={0} max={59} value={ss} disabled={disabled} onChange={e => setSS(+e.target.value)} onFocus={handleNumericFocus} onMouseUp={handleNumericMouseUp} onBlur={handleNumericBlur} />
+      <NumberField className="input" min={0} max={59} value={ss} disabled={disabled} onValueChange={setSS} />
     </div>
   )
 }
