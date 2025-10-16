@@ -2,7 +2,7 @@
 // cd interval-timer
 //cd npm run dev
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type FocusEvent, type MouseEvent } from "react";
 import { FaPlay, FaPause, FaRedo, FaCog } from "react-icons/fa";
 
 import {
@@ -156,6 +156,23 @@ function useAutoFitDigits(config?: { sidePadEachVW?: number }) {
   }, [sidePadEachVW]);
 
   return { wrapRef, ghostRef };
+}
+
+const selectFlag = 'selectAllOnFocus'
+const handleNumericFocus = (e: FocusEvent<HTMLInputElement>) => {
+  const input = e.currentTarget
+  requestAnimationFrame(() => input.select())
+  input.dataset[selectFlag] = '1'
+}
+const handleNumericMouseUp = (e: MouseEvent<HTMLInputElement>) => {
+  const input = e.currentTarget
+  if (input.dataset[selectFlag]) {
+    e.preventDefault()
+    delete input.dataset[selectFlag]
+  }
+}
+const handleNumericBlur = (e: FocusEvent<HTMLInputElement>) => {
+  delete e.currentTarget.dataset[selectFlag]
 }
 
 export default function App() {
@@ -388,7 +405,7 @@ function SettingsModal({ settings, onChange, onClose }:
         <div className="modalBody">
           <section>
             <h4>Structure</h4>
-            <div className="row"><label className="label" style={{ width: 140 }}>Rounds</label><input className="input" type="number" min={1} max={100} value={local.rounds} onChange={e => setLocal({ ...local, rounds: clamp(+e.target.value, 1, 100) })} /></div>
+            <div className="row"><label className="label" style={{ width: 140 }}>Rounds</label><input className="input" type="number" min={1} max={100} value={local.rounds} onChange={e => setLocal({ ...local, rounds: clamp(+e.target.value, 1, 100) })} onFocus={handleNumericFocus} onMouseUp={handleNumericMouseUp} onBlur={handleNumericBlur} /></div>
             <div className="row"><label className="label" style={{ width: 140 }}>Include Warmup</label><input type="checkbox" checked={local.includeWarmup} onChange={e => setLocal({ ...local, includeWarmup: e.target.checked })} /></div>
             <div className="row"><label className="label" style={{ width: 140 }}>Warmup (mm:ss)</label><MmSsInput value={local.warmupSeconds} onChange={v => setLocal({ ...local, warmupSeconds: v })} disabled={!local.includeWarmup} /></div>
             <div className="row"><label className="label" style={{ width: 140 }}>Include Cooldown</label><input type="checkbox" checked={local.includeCooldown} onChange={e => setLocal({ ...local, includeCooldown: e.target.checked })} /></div>
@@ -428,9 +445,9 @@ function MmSsInput({ value, onChange, disabled }: { value: number; onChange: (v:
 
   return (
     <div className="mmss">
-      <input className="input" type="number" min={0} max={59} value={mm} disabled={disabled} onChange={e => setMM(+e.target.value)} />
+      <input className="input" type="number" min={0} max={59} value={mm} disabled={disabled} onChange={e => setMM(+e.target.value)} onFocus={handleNumericFocus} onMouseUp={handleNumericMouseUp} onBlur={handleNumericBlur} />
       <span>:</span>
-      <input className="input" type="number" min={0} max={59} value={ss} disabled={disabled} onChange={e => setSS(+e.target.value)} />
+      <input className="input" type="number" min={0} max={59} value={ss} disabled={disabled} onChange={e => setSS(+e.target.value)} onFocus={handleNumericFocus} onMouseUp={handleNumericMouseUp} onBlur={handleNumericBlur} />
     </div>
   )
 }
