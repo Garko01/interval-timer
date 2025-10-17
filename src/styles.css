@@ -204,24 +204,66 @@ html, body, .container, .main { overflow-x: hidden; }
   overflow:auto;                 /* scroll only the body */
   padding-right:4px;             /* avoid scrollbar overlay on content */
 }
-@media (max-width: 768px){
-  .modalBody{ grid-template-columns: 1fr }  /* stack sections */
+
+/* Tablet breakpoint: stack settings sections */
+@media (max-width: 768px) {
+  .modalBody {
+    grid-template-columns: 1fr;  /* stack sections */
+  }
+
+  .main {
+    padding: 20px;  /* slightly tighter padding */
+  }
 }
 
-.modalFooter{display:flex; justify-content:flex-end; margin-top:12px}
-
-/* Form rows adapt and wrap cleanly */
-.row{
-  display:flex; align-items:center; gap:12px; flex-wrap:wrap;
-}
-
-.label{
-  font-size:13px; color:var(--muted);
-  flex: 0 0 140px;               /* label column on wide screens */
-}
+/* Mobile breakpoint: everything bigger and finger-friendly */
 @media (max-width: 480px) {
-  .main { padding: 16px; }            /* a bit tighter than 24px */
-  .digits { overflow-x: hidden; }     /* belt & suspenders */
+  .main {
+    padding: 16px;
+  }
+
+  .digits {
+    font-size: var(--digit-size, clamp(7rem, 36vw, 24rem));
+    overflow-x: hidden;
+  }
+
+  .intervalLabel {
+    font-size: 2.4rem;
+  }
+
+  .controls {
+    margin-top: 28px;
+    gap: 28px;
+  }
+
+  /* Larger Play / Pause pill button */
+  .iconRound.mainAction {
+    min-width: 140px;
+    height: 64px;
+    padding-inline: 2.4rem;
+    font-size: 28px;
+  }
+
+  /* Larger Reset button */
+  .iconRound.resetBtn {
+    width: 64px;
+    height: 64px;
+    font-size: 24px;
+  }
+
+  /* Tighter and cleaner form rows in settings */
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .label {
+    flex: 1 0 100%;   /* label above inputs */
+    margin-bottom: 4px;
+    font-size: 14px;
+  }
 }
 
 /* Inputs fill the line without overflowing */
