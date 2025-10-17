@@ -1,9 +1,9 @@
 const CACHE_NAME = 'interval-timer-cache-v1'
 const ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.webmanifest',
-  '/vite.svg'
+  './',
+  './index.html',
+  './manifest.webmanifest',
+  './vite.svg'
 ]
 
 self.addEventListener('install', (event) => {
