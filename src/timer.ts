@@ -1,4 +1,5 @@
 export type IntervalType = 'warmup' | 'work' | 'rest' | 'cooldown'
+export type PresetsMap = Record<string, Settings>;
 
 export interface IntervalDef {
   type: IntervalType

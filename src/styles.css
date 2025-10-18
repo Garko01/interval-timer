@@ -295,3 +295,19 @@ html, body, .container, .main { overflow-x: hidden; }
   border: 0;
 }
 
+/* ===== Presets list in Settings modal ===== */
+.presetList {
+  list-style: none;
+  margin: 8px 0 0 0;
+  padding: 0;
+}
+.presetItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #232a36;
+  padding: 4px 0;
+}
+.presetActions button {
+  margin-left: 4px;
+}

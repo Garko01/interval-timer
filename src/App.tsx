@@ -304,6 +304,7 @@ function NumberField({
 
 export default function App() {
   const [settings, setSettings] = useLocalStorage<Settings>('itimer.settings', DEFAULT_SETTINGS)
+    const [presets, setPresets] = useLocalStorage<Record<string, Settings>>('itimer.presets', {});
   const schedule = useMemo(() => buildSchedule(settings), [settings])
 
   const [idx, setIdx] = useState(0)
@@ -512,16 +513,65 @@ export default function App() {
       </div>
 
       {showSettings && (
-        <SettingsModal settings={settings} onClose={() => setShowSettings(false)} onChange={setSettings} />
+        <SettingsModal
+          settings={settings}
+          presets={presets}
+          onPresetsChange={setPresets}
+          onClose={() => setShowSettings(false)}
+          onChange={setSettings}
+        />
       )}
     </div>
   )
 }
 
-function SettingsModal({ settings, onChange, onClose }:
-  { settings: Settings; onChange: (s: Settings | ((p: Settings) => Settings)) => void; onClose: () => void }) {
+function SettingsModal({
+  settings,
+  presets,
+  onPresetsChange,
+  onChange,
+  onClose,
+}: {
+  settings: Settings;
+  presets: Record<string, Settings>;
+  onPresetsChange: (map: Record<string, Settings>) => void;
+  onChange: (s: Settings | ((p: Settings) => Settings)) => void;
+  onClose: () => void;
+}) {
 
   const [local, setLocal] = useState<Settings>(settings)
+  const [newName, setNewName] = useState('');
+
+  function handleSavePreset() {
+    const name = newName.trim();
+    if (!name) return;
+    onPresetsChange({ ...presets, [name]: local });
+    setNewName('');
+  }
+
+  function handleLoadPreset(name: string) {
+    const preset = presets[name];
+    if (!preset) return;
+    onChange(preset);
+    onClose();
+  }
+
+  function handleRenamePreset(oldName: string) {
+    const newLabel = prompt('Rename preset:', oldName);
+    if (!newLabel || newLabel === oldName) return;
+    const updated = { ...presets };
+    updated[newLabel] = updated[oldName];
+    delete updated[oldName];
+    onPresetsChange(updated);
+  }
+
+  function handleDeletePreset(name: string) {
+    if (!confirm(`Delete preset "${name}"?`)) return;
+    const updated = { ...presets };
+    delete updated[name];
+    onPresetsChange(updated);
+  }
+
   useEffect(() => setLocal(settings), [settings])
   function save() { onChange(local); onClose() }
 
@@ -530,6 +580,35 @@ function SettingsModal({ settings, onChange, onClose }:
       <div className="modalCard">
         <div className="modalHeader"><h3>Timer Settings</h3><button className="iconbtn" onClick={onClose}>✖</button></div>
         <div className="modalBody">
+          <section>
+            <h4>Presets</h4>
+            <div className="row">
+              <input
+                className="input"
+                placeholder="New preset name"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+              />
+              <button className="iconbtn" onClick={handleSavePreset}>Save</button>
+            </div>
+
+            {Object.keys(presets).length === 0 ? (
+              <p className="hint" style={{ marginTop: 8 }}>No presets saved yet.</p>
+            ) : (
+              <ul className="presetList">
+                {Object.keys(presets).map((name) => (
+                  <li key={name} className="presetItem">
+                    <span>{name}</span>
+                    <div className="presetActions">
+                      <button className="iconbtn" onClick={() => handleLoadPreset(name)}>Load</button>
+                      <button className="iconbtn" onClick={() => handleRenamePreset(name)}>Rename</button>
+                      <button className="iconbtn" onClick={() => handleDeletePreset(name)}>Delete</button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
           <section>
             <h4>Structure</h4>
             <div className="row"><label className="label" style={{ width: 140 }}>Rounds</label><NumberField className="input" min={1} max={100} value={local.rounds} onValueChange={value => setLocal({ ...local, rounds: value })} /></div>
