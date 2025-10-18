@@ -315,6 +315,9 @@ export default function App() {
 
   const rafRef = useRef<number | null>(null)
   const lastTs = useRef<number | null>(null)
+  const startWallClock = useRef<number | null>(null);
+  const lastTickWallClock = useRef<number | null>(null);
+  const intervalRef = useRef<number | null>(null);
 
   const [showSettings, setShowSettings] = useState(true)
 
@@ -358,6 +361,8 @@ export default function App() {
       const dt = (ts - lastTs.current) / 1000
       lastTs.current = ts
 
+      lastTickWallClock.current = Date.now(); // 🕒 mark RAF activity
+      
       setRemaining(prev => {
         const prevVal = prevRemainingRef.current ?? prev
         const next = Math.max(0, prev - dt)
@@ -424,11 +429,68 @@ export default function App() {
     lastTs.current = null
     // No separate 3-2-1 here; countdown plays at end of each interval.
     setRunning(true)
+
+    // --- Background resilience setup ---
+    startWallClock.current = Date.now();
+    lastTickWallClock.current = startWallClock.current;
+
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    intervalRef.current = window.setInterval(() => {
+      if (!running || !schedule.length) return;
+
+      const now = Date.now();
+      lastTickWallClock.current = now; // mark tick for fallback
+      const elapsed = (now - (startWallClock.current ?? now)) / 1000;
+
+      // Total duration of the schedule
+      const totalDuration = schedule.reduce((acc, seg) => acc + seg.seconds, 0);
+      if (elapsed >= totalDuration) {
+        // Finished all intervals
+        setDone(true);
+        clearInterval(intervalRef.current!);
+        return;
+      }
+
+      // Find which interval we should be in
+      let acc = 0;
+      let newIdx = 0;
+      for (let i = 0; i < schedule.length; i++) {
+        acc += schedule[i].seconds;
+        if (elapsed < acc) {
+          newIdx = i;
+          break;
+        }
+      }
+
+      // Compute remaining time in this interval
+      const prevIntervals = acc - schedule[newIdx].seconds;
+      const currentElapsed = elapsed - prevIntervals;
+      const newRemaining = Math.max(0, schedule[newIdx].seconds - currentElapsed);
+
+      // If we jumped to a new interval, trigger cues
+      if (newIdx !== idxRef.current) {
+        setIdx(newIdx);
+        prevRemainingRef.current = schedule[newIdx].seconds;
+        played3Ref.current = played2Ref.current = played1Ref.current = false;
+
+        const t = schedule[newIdx].type;
+        if (!settings.mute) t === 'work' ? cueWorkStart() : cueRestStart();
+        if (settings.vibrate) {
+          t === 'work' ? vibrate(300) : vibrate([100, 50, 100]);
+        }
+      }
+
+      setRemaining(newRemaining);
+    }, 250);
   }
 
   function pause() {
     setRunning(false)
     if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
   }
 
   function toggle() { running ? pause() : start() }
@@ -443,6 +505,10 @@ export default function App() {
     played2Ref.current = false
     played1Ref.current = false
     prevRemainingRef.current = schedule[0]?.seconds ?? settings.workSeconds
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
   }
 
   function resetSession() {
