@@ -18,7 +18,8 @@ import {
   DEFAULT_SETTINGS, buildSchedule, formatMMSS, requestWakeLock,
   countdownPip3, countdownPip2, countdownPip1,
   cueWorkStart, cueRestStart, cueEndLong,
-  sendFinishNotification, PALETTE
+  sendFinishNotification, PALETTE,
+  vibrate
 } from './timer'
 import type { Settings, IntervalDef } from './timer'
 
@@ -395,6 +396,7 @@ export default function App() {
       setDone(true);
       if (settings.notifications.finish) sendFinishNotification('Interval Timer');
       if (!settings.mute) cueEndLong();
+      if (settings.vibrate) vibrate([200, 100, 200, 100, 400]); // distinct pattern
       setRunning(false);
       return;
     }
@@ -406,10 +408,14 @@ export default function App() {
     prevRemainingRef.current = nextSecs;
     played3Ref.current = played2Ref.current = played1Ref.current = false;
 
-    // Start cue right on the boundary
+    // Play audio and vibration cues on transition
+    const t = schedule[nextIndex].type;
     if (!settings.mute) {
-      const t = schedule[nextIndex].type;
       t === 'work' ? cueWorkStart() : cueRestStart();
+    }
+    if (settings.vibrate) {
+      if (t === 'work') vibrate(300);          // single long buzz
+      else if (t === 'rest') vibrate([100, 50, 100]); // short double buzz
     }
   }
 
@@ -627,6 +633,14 @@ function SettingsModal({
           <section>
             <h4>Power</h4>
             <div className="row"><label className="label" style={{ width: 140 }}>Keep screen awake</label><input type="checkbox" checked={local.wakeLock} onChange={e => setLocal({ ...local, wakeLock: e.target.checked })} /></div>
+            <div className="row">
+              <label className="label" style={{ width: 140 }}>Vibrate on transitions</label>
+              <input
+                type="checkbox"
+                checked={local.vibrate}
+                onChange={(e) => setLocal({ ...local, vibrate: e.target.checked })}
+              />
+            </div>
             <div className="row"><label className="label" style={{ width: 140 }}>Finish notification</label><input type="checkbox" checked={local.notifications.finish} onChange={e => setLocal({ ...local, notifications: { ...local.notifications, finish: e.target.checked } })} /></div>
           </section>
         </div>

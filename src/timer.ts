@@ -19,6 +19,7 @@ export interface Settings {
   precount321: boolean
   mute: boolean
   wakeLock: boolean
+  vibrate: boolean
   notifications: { finish: boolean; perInterval: boolean }
 }
 
@@ -33,6 +34,7 @@ export const DEFAULT_SETTINGS: Settings = {
   precount321: true,
   mute: false,
   wakeLock: false,
+  vibrate: true,
   notifications: { finish: true, perInterval: false },
 }
 
@@ -196,4 +198,14 @@ export function sendFinishNotification(title: string) {
   if (!canNotify()) return
   if (permission() !== 'granted') return
   new Notification(title, { body: 'Workout complete!', silent: false })
+}
+
+// ===== Vibration / Haptics helper =====
+export function vibrate(pattern: number | number[]) {
+  if (typeof navigator === 'undefined' || !('vibrate' in navigator)) return;
+  try {
+    navigator.vibrate(pattern);
+  } catch {
+    // no-op on unsupported devices
+  }
 }
