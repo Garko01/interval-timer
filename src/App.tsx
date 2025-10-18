@@ -644,6 +644,7 @@ function SettingsModal({
   }
 
   useEffect(() => setLocal(settings), [settings]);
+
   function save() {
     onChange(local);
     onClose();
@@ -656,7 +657,9 @@ function SettingsModal({
           <h3>Timer Settings</h3>
           <button className="iconbtn" onClick={onClose}>✖</button>
         </div>
+
         <div className="modalBody">
+          {/* === PRESETS === */}
           <section>
             <h4>Presets</h4>
             <div className="row">
@@ -687,30 +690,157 @@ function SettingsModal({
             )}
           </section>
 
+          {/* === STRUCTURE === */}
           <section>
             <h4>Structure</h4>
-            <div className="row"><label className="label labelFixed">Rounds</label><NumberField className="input" min={1} max={100} value={local.rounds} onValueChange={value => setLocal({ ...local, rounds: value })} /></div>
-            <div className="row"><label className="label labelFixed">Include Warmup</label><input type="checkbox" checked={local.includeWarmup} onChange={e => setLocal({ ...local, includeWarmup: e.target.checked })} /></div>
-            <div className="row"><label className="label labelFixed">Warmup (mm:ss)</label><MmSsInput value={local.warmupSeconds} onChange={v => setLocal({ ...local, warmupSeconds: v })} disabled={!local.includeWarmup} /></div>
-            <div className="row"><label className="label labelFixed">Include Cooldown</label><input type="checkbox" checked={local.includeCooldown} onChange={e => setLocal({ ...local, includeCooldown: e.target.checked })} /></div>
-            <div className="row"><label className="label labelFixed">Cooldown (mm:ss)</label><MmSsInput value={local.cooldownSeconds} onChange={v => setLocal({ ...local, cooldownSeconds: v })} disabled={!local.includeCooldown} /></div>
+
+            <div className="row">
+              <label className="label labelFixed">Rounds</label>
+              <NumberField
+                className="input"
+                min={1}
+                max={100}
+                value={local.rounds}
+                onValueChange={(value) => setLocal({ ...local, rounds: value })}
+              />
+            </div>
+
+            <div className="row">
+              <label className="label labelFixed">Include Warmup</label>
+              <label className="toggle">
+                <input
+                  type="checkbox"
+                  checked={local.includeWarmup}
+                  onChange={(e) => setLocal({ ...local, includeWarmup: e.target.checked })}
+                />
+                <span className="slider" />
+              </label>
+            </div>
+
+            <div className="row">
+              <label className="label labelFixed">Warmup (mm:ss)</label>
+              <MmSsInput
+                value={local.warmupSeconds}
+                onChange={(v) => setLocal({ ...local, warmupSeconds: v })}
+                disabled={!local.includeWarmup}
+              />
+            </div>
+
+            <div className="row">
+              <label className="label labelFixed">Include Cooldown</label>
+              <label className="toggle">
+                <input
+                  type="checkbox"
+                  checked={local.includeCooldown}
+                  onChange={(e) => setLocal({ ...local, includeCooldown: e.target.checked })}
+                />
+                <span className="slider" />
+              </label>
+            </div>
+
+            <div className="row">
+              <label className="label labelFixed">Cooldown (mm:ss)</label>
+              <MmSsInput
+                value={local.cooldownSeconds}
+                onChange={(v) => setLocal({ ...local, cooldownSeconds: v })}
+                disabled={!local.includeCooldown}
+              />
+            </div>
           </section>
 
+          {/* === INTERVALS === */}
           <section>
             <h4>Intervals</h4>
-            <div className="row"><label className="label labelFixed">Work (mm:ss)</label><MmSsInput value={local.workSeconds} onChange={v => setLocal({ ...local, workSeconds: v })} /></div>
-            <div className="row"><label className="label labelFixed">Rest (mm:ss)</label><MmSsInput value={local.restSeconds} onChange={v => setLocal({ ...local, restSeconds: v })} /></div>
-            <div className="row"><label className="label labelFixed">Pre-count 3–2–1</label><input type="checkbox" checked={local.precount321} onChange={e => setLocal({ ...local, precount321: e.target.checked })} /></div>
-            <div className="row"><label className="label labelFixed">Mute sounds</label><input type="checkbox" checked={local.mute} onChange={e => setLocal({ ...local, mute: e.target.checked })} /></div>
+
+            <div className="row">
+              <label className="label labelFixed">Work (mm:ss)</label>
+              <MmSsInput
+                value={local.workSeconds}
+                onChange={(v) => setLocal({ ...local, workSeconds: v })}
+              />
+            </div>
+
+            <div className="row">
+              <label className="label labelFixed">Rest (mm:ss)</label>
+              <MmSsInput
+                value={local.restSeconds}
+                onChange={(v) => setLocal({ ...local, restSeconds: v })}
+              />
+            </div>
+
+            <div className="row">
+              <label className="label labelFixed">Pre-count 3–2–1</label>
+              <label className="toggle">
+                <input
+                  type="checkbox"
+                  checked={local.precount321}
+                  onChange={(e) => setLocal({ ...local, precount321: e.target.checked })}
+                />
+                <span className="slider" />
+              </label>
+            </div>
+
+            <div className="row">
+              <label className="label labelFixed">Mute sounds</label>
+              <label className="toggle">
+                <input
+                  type="checkbox"
+                  checked={local.mute}
+                  onChange={(e) => setLocal({ ...local, mute: e.target.checked })}
+                />
+                <span className="slider" />
+              </label>
+            </div>
           </section>
 
+          {/* === POWER === */}
           <section>
             <h4>Power</h4>
-            <div className="row"><label className="label labelFixed">Keep screen awake</label><input type="checkbox" checked={local.wakeLock} onChange={e => setLocal({ ...local, wakeLock: e.target.checked })} /></div>
-            <div className="row"><label className="label labelFixed">Vibrate on transitions</label><input type="checkbox" checked={local.vibrate} onChange={e => setLocal({ ...local, vibrate: e.target.checked })} /></div>
-            <div className="row"><label className="label labelFixed">Finish notification</label><input type="checkbox" checked={local.notifications.finish} onChange={e => setLocal({ ...local, notifications: { ...local.notifications, finish: e.target.checked } })} /></div>
+
+            <div className="row">
+              <label className="label labelFixed">Keep screen awake</label>
+              <label className="toggle">
+                <input
+                  type="checkbox"
+                  checked={local.wakeLock}
+                  onChange={(e) => setLocal({ ...local, wakeLock: e.target.checked })}
+                />
+                <span className="slider" />
+              </label>
+            </div>
+
+            <div className="row">
+              <label className="label labelFixed">Vibrate on transitions</label>
+              <label className="toggle">
+                <input
+                  type="checkbox"
+                  checked={local.vibrate}
+                  onChange={(e) => setLocal({ ...local, vibrate: e.target.checked })}
+                />
+                <span className="slider" />
+              </label>
+            </div>
+
+            <div className="row">
+              <label className="label labelFixed">Finish notification</label>
+              <label className="toggle">
+                <input
+                  type="checkbox"
+                  checked={local.notifications.finish}
+                  onChange={(e) =>
+                    setLocal({
+                      ...local,
+                      notifications: { ...local.notifications, finish: e.target.checked },
+                    })
+                  }
+                />
+                <span className="slider" />
+              </label>
+            </div>
           </section>
         </div>
+
+        {/* === FOOTER === */}
         <div className="modalFooter">
           <button className="iconbtn" onClick={onClose}>Cancel</button>
           <button className="iconbtn" onClick={save}>Save</button>
