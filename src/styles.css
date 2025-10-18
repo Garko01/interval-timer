@@ -311,3 +311,62 @@ html, body, .container, .main { overflow-x: hidden; }
 .presetActions button {
   margin-left: 4px;
 }
+
+/* Label width utility for consistent layout */
+.labelFixed {
+  flex: 0 0 var(--settings-label-width, 140px);
+  max-width: var(--settings-label-width, 140px);
+}
+
+/* Ensure the modal body adapts responsively */
+.modalBody {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.modalBody section {
+  min-width: 280px;
+}
+
+/* Modal footer layout */
+.modalFooter {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.modalFooter button {
+  min-width: 96px;
+}
+
+/* Mobile optimization */
+@media (max-width: 480px) {
+  .labelFixed {
+    flex: 1 0 100%;
+    max-width: 100%;
+  }
+
+  .modalBody {
+    padding-bottom: 72px; /* room for sticky footer */
+  }
+
+  .modalFooter {
+    position: sticky;
+    bottom: 0;
+    background: rgba(15, 19, 26, 0.95);
+    backdrop-filter: blur(8px);
+    margin: 0 -16px -16px;
+    padding: 12px 16px calc(env(safe-area-inset-bottom) + 12px);
+    border-top: 1px solid rgba(35, 42, 54, 0.85);
+    justify-content: space-between;
+  }
+
+  .modalFooter button {
+    flex: 1 1 auto;
+  }
+}
