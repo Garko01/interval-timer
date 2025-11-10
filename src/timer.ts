@@ -23,6 +23,15 @@ export interface Settings {
   notifications: { finish: boolean; perInterval: boolean }
 }
 
+export interface SessionState {
+  idx: number              // Current interval index
+  remaining: number        // Remaining seconds in current interval
+  round: number            // Current round number
+  timestamp: number        // When session was saved
+  settings: Settings       // Settings snapshot for validation
+  scheduleLength: number   // Validate schedule hasn't changed
+}
+
 export const DEFAULT_SETTINGS: Settings = {
   rounds: 5,
   includeWarmup: false,
@@ -224,4 +233,59 @@ export function vibrate(pattern: number | number[]) {
   } catch {
     // no-op on unsupported devices
   }
+}
+
+// ===== Session Persistence =====
+const SESSION_KEY = 'interval-timer-session'
+
+export function saveSession(state: SessionState): void {
+  try {
+    localStorage.setItem(SESSION_KEY, JSON.stringify(state))
+  } catch {
+    // localStorage might be full or unavailable
+  }
+}
+
+export function loadSession(): SessionState | null {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY)
+    if (!raw) return null
+    return JSON.parse(raw) as SessionState
+  } catch {
+    return null
+  }
+}
+
+export function clearSession(): void {
+  try {
+    localStorage.removeItem(SESSION_KEY)
+  } catch {
+    // no-op
+  }
+}
+
+export function isSessionValid(session: SessionState, currentSettings: Settings): boolean {
+  // Check if settings match
+  if (session.settings.rounds !== currentSettings.rounds) return false
+  if (session.settings.includeWarmup !== currentSettings.includeWarmup) return false
+  if (session.settings.includeCooldown !== currentSettings.includeCooldown) return false
+  if (session.settings.warmupSeconds !== currentSettings.warmupSeconds) return false
+  if (session.settings.cooldownSeconds !== currentSettings.cooldownSeconds) return false
+  if (session.settings.workSeconds !== currentSettings.workSeconds) return false
+  if (session.settings.restSeconds !== currentSettings.restSeconds) return false
+
+  // Check if schedule length matches
+  const currentSchedule = buildSchedule(currentSettings)
+  if (session.scheduleLength !== currentSchedule.length) return false
+
+  // Check if index is valid
+  if (session.idx < 0 || session.idx >= session.scheduleLength) return false
+
+  // Check if session isn't too old (24 hours)
+  const now = Date.now()
+  const age = now - session.timestamp
+  const MAX_AGE = 24 * 60 * 60 * 1000 // 24 hours in ms
+  if (age > MAX_AGE) return false
+
+  return true
 }
