@@ -1,7 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import {
-  SessionState,
-  Settings,
   DEFAULT_SETTINGS,
   saveSession,
   loadSession,
@@ -9,6 +7,7 @@ import {
   isSessionValid,
   buildSchedule,
 } from '../timer'
+import type { SessionState, Settings } from '../timer'
 
 describe('Session Persistence', () => {
   beforeEach(() => {

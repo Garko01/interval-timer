@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
-import { render, act, waitFor } from '@testing-library/react'
+import { render, act } from '@testing-library/react'
 import App from '../App'
 import { loadSession, clearSession } from '../timer'
 

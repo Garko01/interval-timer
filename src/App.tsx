@@ -317,7 +317,7 @@ export default function App() {
   const rafRef = useRef<number | null>(null)
   const lastTs = useRef<number | null>(null)
 
-  const [showSettings, setShowSettings] = useState(true)
+  const [showSettings, setShowSettings] = useState(false)
 
   // countdown-at-end refs
   const prevRemainingRef = useRef<number | null>(null)
@@ -470,8 +470,15 @@ export default function App() {
 
   const { isFS, enter, exit } = useFullscreen()
 
-  // Rebuild/restart if structural settings change
+  // Track if this is first mount to avoid restart on initial load
+  const isFirstMount = useRef(true)
+
+  // Rebuild/restart if structural settings change (but not on first mount)
   useEffect(() => {
+    if (isFirstMount.current) {
+      isFirstMount.current = false
+      return
+    }
     restart()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [schedule])

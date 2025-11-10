@@ -7,6 +7,7 @@ const repo = 'interval-timer'
 export default defineConfig({
   plugins: [react()],
   base: `/${repo}/`,
+  // @ts-ignore - test config for vitest
   test: {
     globals: true,
     environment: 'jsdom',
