@@ -971,8 +971,17 @@ function MmSsInput({ value, onChange, disabled }: { value: number; onChange: (v:
   const s = value % 60
   const [mm, setMM] = useState(m)
   const [ss, setSS] = useState(s)
-  useEffect(() => { setMM(Math.floor(value / 60)); setSS(value % 60) }, [value])
-  useEffect(() => { onChange(clamp(mm, 0, 59) * 60 + clamp(ss, 0, 59)) }, [mm, ss, onChange])
+
+  useEffect(() => {
+    setMM(Math.floor(value / 60))
+    setSS(value % 60)
+  }, [value])
+
+  useEffect(() => {
+    const totalSeconds = clamp(mm, 0, 59) * 60 + clamp(ss, 0, 59)
+    onChange(totalSeconds)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mm, ss])
 
   return (
     <div className="mmss">
