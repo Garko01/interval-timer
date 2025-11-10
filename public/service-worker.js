@@ -1,9 +1,10 @@
 const CACHE_NAME = 'interval-timer-cache-v1'
+const BASE_PATH = '/interval-timer/'
 const ASSETS = [
-  './',
-  './index.html',
-  './manifest.webmanifest',
-  './vite.svg'
+  BASE_PATH,
+  `${BASE_PATH}index.html`,
+  `${BASE_PATH}manifest.webmanifest`,
+  `${BASE_PATH}vite.svg`
 ]
 
 self.addEventListener('install', (event) => {

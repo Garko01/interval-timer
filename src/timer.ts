@@ -75,6 +75,22 @@ function ctx() {
 }
 
 /**
+ * Resume the audio context if it's suspended.
+ * Modern browsers require user interaction to start AudioContext.
+ * Call this on user gestures like clicking play.
+ */
+export async function resumeAudioContext() {
+  const ac = ctx()
+  if (ac.state === 'suspended') {
+    try {
+      await ac.resume()
+    } catch {
+      // silently fail if resume is not allowed
+    }
+  }
+}
+
+/**
  * Digital sport-watch style pip
  * Square wave through a tight band-pass → crisp, piercing beep.
  */

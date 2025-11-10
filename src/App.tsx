@@ -19,7 +19,7 @@ import {
   countdownPip3, countdownPip2, countdownPip1,
   cueWorkStart, cueRestStart, cueEndLong,
   sendFinishNotification, PALETTE,
-  vibrate
+  vibrate, resumeAudioContext
 } from './timer'
 import type { Settings, IntervalDef } from './timer'
 
@@ -315,9 +315,6 @@ export default function App() {
 
   const rafRef = useRef<number | null>(null)
   const lastTs = useRef<number | null>(null)
-  const startWallClock = useRef<number | null>(null);
-  const lastTickWallClock = useRef<number | null>(null);
-  const intervalRef = useRef<number | null>(null);
 
   const [showSettings, setShowSettings] = useState(true)
 
@@ -326,6 +323,18 @@ export default function App() {
   const played3Ref = useRef(false)
   const played2Ref = useRef(false)
   const played1Ref = useRef(false)
+
+  // refs to avoid stale closures in RAF loop
+  const settingsRef = useRef(settings)
+  const scheduleRef = useRef(schedule)
+
+  useEffect(() => {
+    settingsRef.current = settings
+  }, [settings])
+
+  useEffect(() => {
+    scheduleRef.current = schedule
+  }, [schedule])
 
   const current: IntervalDef = schedule[idx] ?? {
     type: 'work',
@@ -361,14 +370,13 @@ export default function App() {
       const dt = (ts - lastTs.current) / 1000
       lastTs.current = ts
 
-      lastTickWallClock.current = Date.now(); // 🕒 mark RAF activity
-      
       setRemaining(prev => {
         const prevVal = prevRemainingRef.current ?? prev
         const next = Math.max(0, prev - dt)
 
         // countdown pips in last 3 seconds of CURRENT interval
-        if (!settings.mute && settings.precount321) {
+        const currentSettings = settingsRef.current
+        if (!currentSettings.mute && currentSettings.precount321) {
           if (!played3Ref.current && prevVal > 3 && next <= 3) { countdownPip3(); played3Ref.current = true }
           if (!played2Ref.current && prevVal > 2 && next <= 2) { countdownPip2(); played2Ref.current = true }
           if (!played1Ref.current && prevVal > 1 && next <= 1) { countdownPip1(); played1Ref.current = true }
@@ -388,37 +396,39 @@ export default function App() {
 
     rafRef.current = requestAnimationFrame(tick)
     return () => { if (rafRef.current !== null) cancelAnimationFrame(rafRef.current) }
-  }, [running, settings.mute, settings.precount321])
+  }, [running])
 
   const idxRef = useRef(0);
   useEffect(() => { idxRef.current = idx; }, [idx]);
 
   function goToNextInterval() {
     const nextIndex = idxRef.current + 1;
+    const currentSchedule = scheduleRef.current;
+    const currentSettings = settingsRef.current;
 
     // Finished
-    if (nextIndex >= schedule.length) {
+    if (nextIndex >= currentSchedule.length) {
       setDone(true);
-      if (settings.notifications.finish) sendFinishNotification('Interval Timer');
-      if (!settings.mute) cueEndLong();
-      if (settings.vibrate) vibrate([200, 100, 200, 100, 400]); // distinct pattern
+      if (currentSettings.notifications.finish) sendFinishNotification('Interval Timer');
+      if (!currentSettings.mute) cueEndLong();
+      if (currentSettings.vibrate) vibrate([200, 100, 200, 100, 400]); // distinct pattern
       setRunning(false);
       return;
     }
 
     // Move index & seconds together (single frame)
-    const nextSecs = schedule[nextIndex].seconds;
+    const nextSecs = currentSchedule[nextIndex].seconds;
     setIdx(nextIndex);
     setRemaining(nextSecs);
     prevRemainingRef.current = nextSecs;
     played3Ref.current = played2Ref.current = played1Ref.current = false;
 
     // Play audio and vibration cues on transition
-    const t = schedule[nextIndex].type;
-    if (!settings.mute) {
+    const t = currentSchedule[nextIndex].type;
+    if (!currentSettings.mute) {
       t === 'work' ? cueWorkStart() : cueRestStart();
     }
-    if (settings.vibrate) {
+    if (currentSettings.vibrate) {
       if (t === 'work') vibrate(300);          // single long buzz
       else if (t === 'rest') vibrate([100, 50, 100]); // short double buzz
     }
@@ -427,70 +437,15 @@ export default function App() {
   function start() {
     setDone(false)
     lastTs.current = null
+    // Resume audio context on user gesture (required by modern browsers)
+    resumeAudioContext()
     // No separate 3-2-1 here; countdown plays at end of each interval.
     setRunning(true)
-
-    // --- Background resilience setup ---
-    startWallClock.current = Date.now();
-    lastTickWallClock.current = startWallClock.current;
-
-    if (intervalRef.current) clearInterval(intervalRef.current);
-    intervalRef.current = window.setInterval(() => {
-      if (!running || !schedule.length) return;
-
-      const now = Date.now();
-      lastTickWallClock.current = now; // mark tick for fallback
-      const elapsed = (now - (startWallClock.current ?? now)) / 1000;
-
-      // Total duration of the schedule
-      const totalDuration = schedule.reduce((acc, seg) => acc + seg.seconds, 0);
-      if (elapsed >= totalDuration) {
-        // Finished all intervals
-        setDone(true);
-        clearInterval(intervalRef.current!);
-        return;
-      }
-
-      // Find which interval we should be in
-      let acc = 0;
-      let newIdx = 0;
-      for (let i = 0; i < schedule.length; i++) {
-        acc += schedule[i].seconds;
-        if (elapsed < acc) {
-          newIdx = i;
-          break;
-        }
-      }
-
-      // Compute remaining time in this interval
-      const prevIntervals = acc - schedule[newIdx].seconds;
-      const currentElapsed = elapsed - prevIntervals;
-      const newRemaining = Math.max(0, schedule[newIdx].seconds - currentElapsed);
-
-      // If we jumped to a new interval, trigger cues
-      if (newIdx !== idxRef.current) {
-        setIdx(newIdx);
-        prevRemainingRef.current = schedule[newIdx].seconds;
-        played3Ref.current = played2Ref.current = played1Ref.current = false;
-
-        const t = schedule[newIdx].type;
-        if (!settings.mute) t === 'work' ? cueWorkStart() : cueRestStart();
-        if (settings.vibrate) {
-          t === 'work' ? vibrate(300) : vibrate([100, 50, 100]);
-        }
-      }
-
-      setRemaining(newRemaining);
-    }, 250);
   }
 
   function pause() {
     setRunning(false)
     if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
   }
 
   function toggle() { running ? pause() : start() }
@@ -505,10 +460,6 @@ export default function App() {
     played2Ref.current = false
     played1Ref.current = false
     prevRemainingRef.current = schedule[0]?.seconds ?? settings.workSeconds
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
   }
 
   function resetSession() {
@@ -522,10 +473,7 @@ export default function App() {
   useEffect(() => {
     restart()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    settings.rounds, settings.includeWarmup, settings.includeCooldown,
-    settings.warmupSeconds, settings.cooldownSeconds, settings.workSeconds, settings.restSeconds
-  ])
+  }, [schedule])
 
   const { wrapRef, ghostRef } = useAutoFitDigits();
 
@@ -858,7 +806,7 @@ function MmSsInput({ value, onChange, disabled }: { value: number; onChange: (v:
   const [mm, setMM] = useState(m)
   const [ss, setSS] = useState(s)
   useEffect(() => { setMM(Math.floor(value / 60)); setSS(value % 60) }, [value])
-  useEffect(() => { onChange(clamp(mm, 0, 59) * 60 + clamp(ss, 0, 59)) }, [mm, ss])
+  useEffect(() => { onChange(clamp(mm, 0, 59) * 60 + clamp(ss, 0, 59)) }, [mm, ss, onChange])
 
   return (
     <div className="mmss">
