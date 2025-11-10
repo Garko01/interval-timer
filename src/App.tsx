@@ -316,6 +316,7 @@ export default function App() {
 
   const rafRef = useRef<number | null>(null)
   const lastTs = useRef<number | null>(null)
+  const isResumingRef = useRef(false)
 
   const [showSettings, setShowSettings] = useState(false)
   const [showResume, setShowResume] = useState(false)
@@ -361,8 +362,14 @@ export default function App() {
     prevRemainingRef.current = current.seconds
   }, [current.seconds])
 
-  // Keep remaining in sync when interval changes
-  useEffect(() => { setRemaining(current.seconds) }, [current.seconds])
+  // Keep remaining in sync when interval changes (unless resuming)
+  useEffect(() => {
+    if (isResumingRef.current) {
+      isResumingRef.current = false
+      return
+    }
+    setRemaining(current.seconds)
+  }, [current.seconds])
 
   // Tick loop with T-3 / T-2 / T-1 pips
   useEffect(() => {
@@ -472,6 +479,7 @@ export default function App() {
 
   function handleResumeSession() {
     if (!savedSession) return
+    isResumingRef.current = true
     setIdx(savedSession.idx)
     setRemaining(savedSession.remaining)
     setDone(false)
