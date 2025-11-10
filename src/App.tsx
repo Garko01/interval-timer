@@ -19,7 +19,8 @@ import {
   countdownPip3, countdownPip2, countdownPip1,
   cueWorkStart, cueRestStart, cueEndLong,
   sendFinishNotification, PALETTE,
-  vibrate, resumeAudioContext
+  vibrate, resumeAudioContext,
+  saveSession, clearSession
 } from './timer'
 import type { Settings, IntervalDef } from './timer'
 
@@ -474,6 +475,46 @@ export default function App() {
     restart()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [schedule])
+
+  // Auto-save session state on changes
+  useEffect(() => {
+    // Only save if timer is running or paused (not initial state)
+    if (idx > 0 || (idx === 0 && remaining !== schedule[0]?.seconds)) {
+      saveSession({
+        idx,
+        remaining,
+        round,
+        timestamp: Date.now(),
+        settings,
+        scheduleLength: schedule.length,
+      })
+    }
+  }, [idx, remaining, running, round, settings, schedule])
+
+  // Periodic backup saves while running (every 5 seconds)
+  useEffect(() => {
+    if (!running) return
+
+    const intervalId = setInterval(() => {
+      saveSession({
+        idx,
+        remaining,
+        round,
+        timestamp: Date.now(),
+        settings,
+        scheduleLength: schedule.length,
+      })
+    }, 5000)
+
+    return () => clearInterval(intervalId)
+  }, [running, idx, remaining, round, settings, schedule])
+
+  // Clear session on completion
+  useEffect(() => {
+    if (done) {
+      clearSession()
+    }
+  }, [done])
 
   const { wrapRef, ghostRef } = useAutoFitDigits();
 
