@@ -28,3 +28,19 @@ Thumbs.db
 # Env
 .env
 .env.*
+
+# Claude-related
+CLAUDE.md
+.claude/
+claude-*.log
+
+# Secrets & Internal
+*.key
+*.pem
+*.p12
+*.pfx
+secrets/
+config/local.*
+*.secret.*
+credentials.*
+.secrets
