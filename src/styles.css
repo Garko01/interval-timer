@@ -158,6 +158,7 @@ html, body, .container, .main { overflow-x: hidden; }
 .resetBtn { border-color: #3a3f49 }
 
 .float-br{position:fixed;right:16px;bottom:16px}
+.float-bl{position:fixed;left:16px;bottom:16px}
 .circle{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px solid #2a2f38;background:#141821}
 
 .row{display:flex;gap:12px;align-items:center}

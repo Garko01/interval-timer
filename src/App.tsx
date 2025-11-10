@@ -20,9 +20,9 @@ import {
   cueWorkStart, cueRestStart, cueEndLong,
   sendFinishNotification, PALETTE,
   vibrate, resumeAudioContext,
-  saveSession, clearSession
+  saveSession, clearSession, loadSession, isSessionValid
 } from './timer'
-import type { Settings, IntervalDef } from './timer'
+import type { Settings, IntervalDef, SessionState } from './timer'
 
 function useLocalStorage<T>(key: string, initial: T) {
   const [state, setState] = useState<T>(() => {
@@ -318,6 +318,8 @@ export default function App() {
   const lastTs = useRef<number | null>(null)
 
   const [showSettings, setShowSettings] = useState(false)
+  const [showResume, setShowResume] = useState(false)
+  const [savedSession, setSavedSession] = useState<SessionState | null>(null)
 
   // countdown-at-end refs
   const prevRemainingRef = useRef<number | null>(null)
@@ -468,10 +470,44 @@ export default function App() {
     setShowSettings(false);
   }
 
+  function handleResumeSession() {
+    if (!savedSession) return
+    setIdx(savedSession.idx)
+    setRemaining(savedSession.remaining)
+    setDone(false)
+    prevRemainingRef.current = savedSession.remaining
+    setShowResume(false)
+    setSavedSession(null)
+  }
+
+  function handleStartFresh() {
+    clearSession()
+    restart()
+    setShowResume(false)
+    setSavedSession(null)
+  }
+
+  function handleManualResume() {
+    const session = loadSession()
+    if (session && isSessionValid(session, settings)) {
+      setSavedSession(session)
+      setShowResume(true)
+    }
+  }
+
   const { isFS, enter, exit } = useFullscreen()
 
   // Track if this is first mount to avoid restart on initial load
   const isFirstMount = useRef(true)
+
+  // Check for saved session on mount
+  useEffect(() => {
+    const session = loadSession()
+    if (session && isSessionValid(session, settings)) {
+      setSavedSession(session)
+      setShowResume(true)
+    }
+  }, [settings])
 
   // Rebuild/restart if structural settings change (but not on first mount)
   useEffect(() => {
@@ -580,6 +616,19 @@ export default function App() {
         <button className="circle iconbtn" onClick={() => isFS ? exit() : enter()} title={isFS ? 'Exit Fullscreen' : 'Enter Fullscreen'}>⛶</button>
       </div>
 
+      {!running && !done && loadSession() && (
+        <div className="float-bl">
+          <button
+            className="circle iconbtn"
+            onClick={handleManualResume}
+            title="Resume last session"
+            aria-label="Resume last session"
+          >
+            ⏎
+          </button>
+        </div>
+      )}
+
       {showSettings && (
         <SettingsModal
           settings={settings}
@@ -589,6 +638,67 @@ export default function App() {
           onChange={setSettings}
         />
       )}
+
+      {showResume && savedSession && (
+        <ResumeModal
+          session={savedSession}
+          schedule={schedule}
+          onResume={handleResumeSession}
+          onStartFresh={handleStartFresh}
+        />
+      )}
+    </div>
+  )
+}
+
+function ResumeModal({
+  session,
+  schedule,
+  onResume,
+  onStartFresh,
+}: {
+  session: SessionState
+  schedule: IntervalDef[]
+  onResume: () => void
+  onStartFresh: () => void
+}) {
+  const currentInterval = schedule[session.idx]
+  const timeAgo = Math.floor((Date.now() - session.timestamp) / 1000)
+
+  return (
+    <div className="modal" role="dialog" aria-modal="true">
+      <div className="modalCard">
+        <div className="modalHeader">
+          <h3>Resume Session?</h3>
+        </div>
+
+        <div className="modalBody">
+          <p style={{ marginBottom: '1rem' }}>
+            You have a saved session from {timeAgo < 60 ? 'just now' : `${Math.floor(timeAgo / 60)} min ago`}.
+          </p>
+
+          <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '8px', marginBottom: '1rem' }}>
+            <div style={{ marginBottom: '0.5rem' }}>
+              <strong>Round:</strong> {session.round} / {session.settings.rounds}
+            </div>
+            <div style={{ marginBottom: '0.5rem' }}>
+              <strong>Interval:</strong> {currentInterval?.name || 'Unknown'}
+            </div>
+            <div>
+              <strong>Time remaining:</strong> {formatMMSS(Math.ceil(session.remaining))}
+            </div>
+          </div>
+
+          <p style={{ fontSize: '0.9rem', color: '#999' }}>
+            Choose to resume where you left off, or start a fresh session.
+          </p>
+        </div>
+
+        <div className="modalFooter">
+          <button className="iconbtn" onClick={onStartFresh}>Start Fresh</button>
+          <button className="iconbtn" onClick={onResume} style={{ background: '#3AA7E9' }}>Resume</button>
+        </div>
+      </div>
     </div>
   )
 }
