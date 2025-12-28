@@ -307,6 +307,7 @@ function NumberField({
 export default function App() {
   const [settings, setSettings] = useLocalStorage<Settings>('itimer.settings', DEFAULT_SETTINGS)
     const [presets, setPresets] = useLocalStorage<Record<string, Settings>>('itimer.presets', {});
+  const [currentPresetName, setCurrentPresetName] = useState<string | null>(null);
   const schedule = useMemo(() => buildSchedule(settings), [settings])
 
   const [idx, setIdx] = useState(0)
@@ -576,6 +577,14 @@ export default function App() {
         {done ? 'Workout complete' : ''}
       </span>
       
+      {currentPresetName && (
+        <div className="float-tl">
+          <div className="preset-badge" title={`Preset: ${currentPresetName}`}>
+            {currentPresetName}
+          </div>
+        </div>
+      )}
+
       <div className="float-tr">
         <button
           className="circle iconbtn"
@@ -644,6 +653,8 @@ export default function App() {
           onPresetsChange={setPresets}
           onClose={() => setShowSettings(false)}
           onChange={setSettings}
+          currentPresetName={currentPresetName}
+          onPresetNameChange={setCurrentPresetName}
         />
       )}
 
@@ -717,12 +728,16 @@ function SettingsModal({
   onPresetsChange,
   onChange,
   onClose,
+  currentPresetName,
+  onPresetNameChange,
 }: {
   settings: Settings;
   presets: Record<string, Settings>;
   onPresetsChange: (map: Record<string, Settings>) => void;
   onChange: (s: Settings | ((p: Settings) => Settings)) => void;
   onClose: () => void;
+  currentPresetName: string | null;
+  onPresetNameChange: (name: string | null) => void;
 }) {
   const [local, setLocal] = useState<Settings>(settings);
   const [newName, setNewName] = useState('');
@@ -764,6 +779,7 @@ function SettingsModal({
     const preset = presets[name];
     if (!preset) return;
     onChange(preset);
+    onPresetNameChange(name);
     onClose();
   }
 
@@ -784,6 +800,13 @@ function SettingsModal({
 
   function save() {
     onChange(local);
+    // Clear preset name if settings were manually changed
+    if (currentPresetName) {
+      const loadedPreset = presets[currentPresetName];
+      if (!loadedPreset || JSON.stringify(loadedPreset) !== JSON.stringify(local)) {
+        onPresetNameChange(null);
+      }
+    }
     onClose();
   }
 

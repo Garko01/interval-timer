@@ -19,10 +19,33 @@ button{font:inherit}
 
 .main{flex:1;display:flex;align-items:center;justify-content:center;padding:24px}
 
+.float-tl {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 10;
+}
+
+.preset-badge {
+  background: rgba(18, 21, 26, 0.9);
+  border: 1px solid #2a2f38;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--sky-blue);
+  font-weight: 500;
+  backdrop-filter: blur(8px);
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .float-tr {
   position: fixed;
   top: 16px;
   right: 16px;
+  z-index: 10;
 }
 
 .float-tr .iconbtn {
@@ -264,6 +287,26 @@ html, body, .container, .main { overflow-x: hidden; }
     flex: 1 0 100%;   /* label above inputs */
     margin-bottom: 4px;
     font-size: 14px;
+  }
+
+  /* Compact preset badge on mobile */
+  .preset-badge {
+    font-size: 11px;
+    padding: 6px 10px;
+    max-width: 140px;
+  }
+
+  .float-tl,
+  .float-tr {
+    top: 12px;
+  }
+
+  .float-tl {
+    left: 12px;
+  }
+
+  .float-tr {
+    right: 12px;
   }
 }
 
