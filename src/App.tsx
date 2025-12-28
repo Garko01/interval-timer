@@ -12,7 +12,7 @@ import {
   type InputHTMLAttributes,
   type MouseEvent,
 } from "react";
-import { FaPlay, FaPause, FaRedo, FaCog } from "react-icons/fa";
+import { FaPlay, FaPause, FaRedo, FaCog, FaStepBackward, FaStepForward, FaInfoCircle } from "react-icons/fa";
 
 import {
   DEFAULT_SETTINGS, buildSchedule, formatMMSS, requestWakeLock,
@@ -504,6 +504,48 @@ export default function App() {
     }
   }
 
+  // Interval navigation handlers
+  function handlePrevInterval() {
+    const prevIdx = idx - 1
+    if (prevIdx < 0) return
+
+    const targetInterval = schedule[prevIdx]
+    if (!targetInterval) return
+
+    // Update interval state - RAF loop will pick up new values
+    setIdx(prevIdx)
+    setRemaining(targetInterval.seconds)
+    prevRemainingRef.current = targetInterval.seconds
+    played3Ref.current = false
+    played2Ref.current = false
+    played1Ref.current = false
+    setDone(false)
+    lastTs.current = null // Reset timestamp for smooth continuation
+  }
+
+  function handleNextInterval() {
+    const nextIdx = idx + 1
+    if (nextIdx >= schedule.length) return
+
+    const targetInterval = schedule[nextIdx]
+    if (!targetInterval) return
+
+    // Update interval state - RAF loop will pick up new values
+    setIdx(nextIdx)
+    setRemaining(targetInterval.seconds)
+    prevRemainingRef.current = targetInterval.seconds
+    played3Ref.current = false
+    played2Ref.current = false
+    played1Ref.current = false
+    setDone(false)
+    lastTs.current = null // Reset timestamp for smooth continuation
+  }
+
+  function handleInfo() {
+    // Placeholder for future info feature
+    console.log('Info button clicked - feature to be implemented')
+  }
+
   const { isFS, enter, exit } = useFullscreen()
 
   // Track if this is first mount to avoid restart on initial load
@@ -609,21 +651,50 @@ export default function App() {
           </div>
           <div className="controls">
             <button
-              className="iconRound resetBtn"
+              className="controlBtn resetBtn"
               onClick={resetSession}
-              aria-label="Reset settings"
+              aria-label="Reset"
               title="Reset"
             >
               <FaRedo />
             </button>
 
             <button
-              className="iconRound mainAction"
+              className="controlBtn navBtn"
+              onClick={handlePrevInterval}
+              disabled={idx <= 0}
+              aria-label="Previous interval"
+              title="Previous interval"
+            >
+              <FaStepBackward />
+            </button>
+
+            <button
+              className="controlBtn playPauseBtn"
               onClick={toggle}
               aria-label={running ? "Pause" : "Start"}
               title={running ? "Pause" : "Start"}
             >
               {running ? <FaPause /> : <FaPlay />}
+            </button>
+
+            <button
+              className="controlBtn navBtn"
+              onClick={handleNextInterval}
+              disabled={idx >= schedule.length - 1}
+              aria-label="Next interval"
+              title="Next interval"
+            >
+              <FaStepForward />
+            </button>
+
+            <button
+              className="controlBtn infoBtn"
+              onClick={handleInfo}
+              aria-label="Info"
+              title="Info"
+            >
+              <FaInfoCircle />
             </button>
           </div>
         </div>
