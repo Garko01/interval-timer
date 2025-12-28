@@ -473,9 +473,20 @@ export default function App() {
     prevRemainingRef.current = schedule[0]?.seconds ?? settings.workSeconds
   }
 
-  function resetSession() {
-    restart();
-    setShowSettings(false);
+  function resetCurrentInterval() {
+    const currentSchedule = scheduleRef.current;
+    const currentIdx = idxRef.current;
+    const currentInterval = currentSchedule[currentIdx];
+
+    if (!currentInterval) return;
+
+    // Reset current interval time to full duration
+    setRemaining(currentInterval.seconds);
+    prevRemainingRef.current = currentInterval.seconds;
+    played3Ref.current = false;
+    played2Ref.current = false;
+    played1Ref.current = false;
+    lastTs.current = null; // Reset timestamp for smooth continuation
   }
 
   function handleResumeSession() {
@@ -652,9 +663,9 @@ export default function App() {
           <div className="controls">
             <button
               className="controlBtn resetBtn"
-              onClick={resetSession}
-              aria-label="Reset"
-              title="Reset"
+              onClick={resetCurrentInterval}
+              aria-label="Reset current interval"
+              title="Reset current interval"
             >
               <FaRedo />
             </button>
