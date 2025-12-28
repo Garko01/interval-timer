@@ -12,7 +12,7 @@ import {
   type InputHTMLAttributes,
   type MouseEvent,
 } from "react";
-import { FaPlay, FaPause, FaRedo, FaCog, FaStepBackward, FaStepForward, FaInfoCircle } from "react-icons/fa";
+import { FaPlay, FaPause, FaRedo, FaCog, FaStepBackward, FaStepForward, FaLock, FaUnlock } from "react-icons/fa";
 
 import {
   DEFAULT_SETTINGS, buildSchedule, formatMMSS, requestWakeLock,
@@ -322,6 +322,7 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false)
   const [showResume, setShowResume] = useState(false)
   const [savedSession, setSavedSession] = useState<SessionState | null>(null)
+  const [locked, setLocked] = useState(false)
 
   // countdown-at-end refs
   const prevRemainingRef = useRef<number | null>(null)
@@ -552,9 +553,13 @@ export default function App() {
     lastTs.current = null // Reset timestamp for smooth continuation
   }
 
-  function handleInfo() {
-    // Placeholder for future info feature
-    console.log('Info button clicked - feature to be implemented')
+  function handleLock() {
+    setLocked(true)
+    setShowSettings(false) // Close settings if open
+  }
+
+  function handleUnlock() {
+    setLocked(false)
   }
 
   const { isFS, enter, exit } = useFullscreen()
@@ -660,10 +665,11 @@ export default function App() {
             <span className="ghost" ref={ghostRef}>88:88</span>
             <span className="value">{formatMMSS(Math.ceil(remaining))}</span>
           </div>
-          <div className="controls">
+          <div className="controls" style={locked ? { position: 'relative', zIndex: 10000 } : {}}>
             <button
               className="controlBtn resetBtn"
               onClick={resetCurrentInterval}
+              disabled={locked}
               aria-label="Reset current interval"
               title="Reset current interval"
             >
@@ -673,7 +679,7 @@ export default function App() {
             <button
               className="controlBtn navBtn"
               onClick={handlePrevInterval}
-              disabled={idx <= 0}
+              disabled={locked || idx <= 0}
               aria-label="Previous interval"
               title="Previous interval"
             >
@@ -683,6 +689,7 @@ export default function App() {
             <button
               className="controlBtn playPauseBtn"
               onClick={toggle}
+              disabled={locked}
               aria-label={running ? "Pause" : "Start"}
               title={running ? "Pause" : "Start"}
             >
@@ -692,7 +699,7 @@ export default function App() {
             <button
               className="controlBtn navBtn"
               onClick={handleNextInterval}
-              disabled={idx >= schedule.length - 1}
+              disabled={locked || idx >= schedule.length - 1}
               aria-label="Next interval"
               title="Next interval"
             >
@@ -700,12 +707,12 @@ export default function App() {
             </button>
 
             <button
-              className="controlBtn infoBtn"
-              onClick={handleInfo}
-              aria-label="Info"
-              title="Info"
+              className="controlBtn lockBtn"
+              onClick={locked ? handleUnlock : handleLock}
+              aria-label={locked ? "Unlock page" : "Lock page"}
+              title={locked ? "Unlock page" : "Lock page"}
             >
-              <FaInfoCircle />
+              {locked ? <FaLock /> : <FaUnlock />}
             </button>
           </div>
         </div>
@@ -748,7 +755,26 @@ export default function App() {
           onStartFresh={handleStartFresh}
         />
       )}
+
+      {locked && <LockOverlay />}
     </div>
+  )
+}
+
+function LockOverlay() {
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 9999,
+        backgroundColor: 'transparent',
+      }}
+      aria-label="Page is locked"
+    />
   )
 }
 

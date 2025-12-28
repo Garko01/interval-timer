@@ -170,15 +170,17 @@ html, body, .container, .main { overflow-x: hidden; }
   transform: none;
 }
 
-/* Reset and Info buttons - smaller */
+/* Reset, Info, and Lock buttons - smaller */
 .controlBtn.resetBtn,
-.controlBtn.infoBtn {
+.controlBtn.infoBtn,
+.controlBtn.lockBtn {
   font-size: 20px;
   opacity: 0.7;
 }
 
 .controlBtn.resetBtn:hover:not(:disabled),
-.controlBtn.infoBtn:hover:not(:disabled) {
+.controlBtn.infoBtn:hover:not(:disabled),
+.controlBtn.lockBtn:hover {
   opacity: 1;
 }
 
@@ -526,7 +528,8 @@ html, body, .container, .main { overflow-x: hidden; }
   }
 
   .controlBtn.resetBtn,
-  .controlBtn.infoBtn {
+  .controlBtn.infoBtn,
+  .controlBtn.lockBtn {
     font-size: 18px;
   }
 
