@@ -726,12 +726,38 @@ function SettingsModal({
 }) {
   const [local, setLocal] = useState<Settings>(settings);
   const [newName, setNewName] = useState('');
+  const [editingPreset, setEditingPreset] = useState<string | null>(null);
 
   function handleSavePreset() {
     const name = newName.trim();
     if (!name) return;
-    onPresetsChange({ ...presets, [name]: local });
+
+    // Prevent name collision during rename
+    if (editingPreset && name !== editingPreset && presets[name]) {
+      alert(`Preset "${name}" already exists`);
+      return;
+    }
+
+    const updated = { ...presets };
+
+    // Remove old name if renamed
+    if (editingPreset && name !== editingPreset) {
+      delete updated[editingPreset];
+    }
+
+    updated[name] = local;
+    onPresetsChange(updated);
+
     setNewName('');
+    setEditingPreset(null);
+  }
+
+  function handleEditPreset(name: string) {
+    const preset = presets[name];
+    if (!preset) return;
+    setLocal(preset);
+    setNewName(name);
+    setEditingPreset(name);
   }
 
   function handleLoadPreset(name: string) {
@@ -741,13 +767,10 @@ function SettingsModal({
     onClose();
   }
 
-  function handleRenamePreset(oldName: string) {
-    const newLabel = prompt('Rename preset:', oldName);
-    if (!newLabel || newLabel === oldName) return;
-    const updated = { ...presets };
-    updated[newLabel] = updated[oldName];
-    delete updated[oldName];
-    onPresetsChange(updated);
+  function handleCancelEdit() {
+    setNewName('');
+    setEditingPreset(null);
+    setLocal(settings);
   }
 
   function handleDeletePreset(name: string) {
@@ -779,11 +802,16 @@ function SettingsModal({
             <div className="row">
               <input
                 className="input"
-                placeholder="New preset name"
+                placeholder={editingPreset ? "Preset name" : "New preset name"}
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
               />
-              <button className="iconbtn" onClick={handleSavePreset}>Save</button>
+              <button className="iconbtn" onClick={handleSavePreset}>
+                {editingPreset ? 'Update' : 'Save'}
+              </button>
+              {editingPreset && (
+                <button className="iconbtn" onClick={handleCancelEdit}>Cancel</button>
+              )}
             </div>
 
             {Object.keys(presets).length === 0 ? (
@@ -795,7 +823,7 @@ function SettingsModal({
                     <span>{name}</span>
                     <div className="presetActions">
                       <button className="iconbtn" onClick={() => handleLoadPreset(name)}>Load</button>
-                      <button className="iconbtn" onClick={() => handleRenamePreset(name)}>Rename</button>
+                      <button className="iconbtn" onClick={() => handleEditPreset(name)}>Edit</button>
                       <button className="iconbtn" onClick={() => handleDeletePreset(name)}>Delete</button>
                     </div>
                   </li>
