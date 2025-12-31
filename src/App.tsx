@@ -87,7 +87,6 @@ function useAutoFitDigits(config?: { sidePadEachVW?: number }) {
 
       const vw = Math.max(320, document.documentElement.clientWidth || window.innerWidth);
       const vh = Math.max(320, document.documentElement.clientHeight || window.innerHeight);
-      const isPortrait = vh >= vw;
       const isMobile   = vw < 768;
       const isTablet   = vw >= 768 && vw < 1200;
       const isDesktop  = vw >= 1200;
@@ -110,38 +109,16 @@ function useAutoFitDigits(config?: { sidePadEachVW?: number }) {
 
       const ghostW100 = measureGhost();
 
-      // ===== MOBILE (fit to actual container) =====
+      // ===== MOBILE (let CSS clamp handle sizing) =====
       if (isMobile) {
-        // real container width (includes its padding)
+        // Only set padding, let CSS clamp handle font-size to avoid conflicts
         const containerW = el.clientWidth || vw;
-
-        // symmetric side padding in *pixels* (a bit smaller on tiny phones)
-        const padPx =
-          Math.round((containerW * (vw < 420 ? 0.015 : 0.02))) + 1; // +1px safety
-
-        // expose it to CSS so both sides are *exactly* equal
+        const padPx = Math.round((containerW * (vw < 420 ? 0.015 : 0.02))) + 1;
         el.style.setProperty('--digits-pad', `${padPx}px`);
 
-        // width fit using *container* width, not viewport width
-        const usableW   = Math.max(1, containerW - padPx * 2);
-        const sizeFromW = (100 * usableW * 0.99) / ghostW100; // maximize width usage
-        // Increased multipliers to account for larger top elements (preset + total time at 1.4rem)
-        const sizeFromH = isPortrait ? vh * 0.45 : vh * 0.58;
-
-        const initialPx = Math.max(48, Math.min(sizeFromW, sizeFromH, 800));
-        el.style.setProperty('--digit-size', `${Math.round(initialPx)}px`);
-
-        // verify after paint; if still a hair wide, shrink once
-        requestAnimationFrame(() => {
-          const valueEl = el.querySelector('.value') as HTMLElement | null;
-          if (!valueEl) return;
-          const valueW = valueEl.getBoundingClientRect().width;
-          if (valueW > usableW) {
-            const scale = (usableW / valueW) * 0.985;
-            el.style.setProperty('--digit-size',
-              `${Math.max(48, Math.floor(initialPx * scale))}px`);
-          }
-        });
+        // Don't override --digit-size on mobile - CSS clamp handles it better
+        // This avoids JavaScript fighting with CSS and causing shrinking issues
+        el.style.removeProperty('--digit-size');
         return;
       }
 
