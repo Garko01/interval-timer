@@ -287,7 +287,7 @@ html, body, .container, .main { overflow-x: hidden; }
   }
 
   .digits {
-    font-size: var(--digit-size, clamp(5rem, 22vw, 16rem));
+    font-size: var(--digit-size, clamp(5rem, 26vw, 16rem));
     overflow-x: hidden;
   }
 
