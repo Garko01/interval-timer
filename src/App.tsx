@@ -643,15 +643,12 @@ export default function App() {
         {done ? 'Workout complete' : ''}
       </span>
       
-      {currentPresetName && (
-        <div className="float-tl">
+      <div className="float-tl">
+        {currentPresetName && (
           <div className="preset-badge" title={`Preset: ${currentPresetName}`}>
             {currentPresetName}
           </div>
-        </div>
-      )}
-
-      <div className="float-tc">
+        )}
         <div className="total-time">
           {formatMMSS(Math.ceil(calculateTotalRemaining(schedule, idx, remaining)))}
         </div>
