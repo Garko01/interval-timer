@@ -125,7 +125,8 @@ function useAutoFitDigits(config?: { sidePadEachVW?: number }) {
         // width fit using *container* width, not viewport width
         const usableW   = Math.max(1, containerW - padPx * 2);
         const sizeFromW = (100 * usableW * 0.99) / ghostW100; // maximize width usage
-        const sizeFromH = isPortrait ? vh * 0.38 : vh * 0.50;
+        // Increased multipliers to account for larger top elements (preset + total time at 1.4rem)
+        const sizeFromH = isPortrait ? vh * 0.45 : vh * 0.58;
 
         const initialPx = Math.max(48, Math.min(sizeFromW, sizeFromH, 800));
         el.style.setProperty('--digit-size', `${Math.round(initialPx)}px`);
