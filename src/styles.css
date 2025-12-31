@@ -27,18 +27,30 @@ button{font:inherit}
 }
 
 .preset-badge {
-  background: rgba(18, 21, 26, 0.9);
-  border: 1px solid #2a2f38;
-  border-radius: 8px;
-  padding: 8px 12px;
-  font-size: 13px;
-  color: var(--sky-blue);
-  font-weight: 500;
-  backdrop-filter: blur(8px);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 400;
+  opacity: 0.85;
   max-width: 200px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.float-tc {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+}
+
+.total-time {
+  color: #fff;
+  font-size: 14px;
+  font-weight: 400;
+  font-family: 'Roboto Mono', monospace;
+  opacity: 0.9;
 }
 
 .float-tr {
@@ -112,7 +124,7 @@ html, body, .container, .main { overflow-x: hidden; }
   font-weight: 700;
   line-height: 1;
   letter-spacing: .015em;
-  font-size: var(--digit-size, clamp(6rem, 30vw, 22rem));
+  font-size: var(--digit-size, clamp(6rem, 38vw, 28rem));
   font-variant-numeric: tabular-nums lining-nums;
   font-feature-settings: "tnum" 1, "lnum" 1;
   white-space: nowrap;
@@ -123,8 +135,8 @@ html, body, .container, .main { overflow-x: hidden; }
   box-sizing: border-box;
 
   /* single symmetric var, no other paddings anywhere */
-  padding-left: var(--digits-pad, 12px);
-  padding-right: var(--digits-pad, 12px);
+  padding-left: var(--digits-pad, 4px);
+  padding-right: var(--digits-pad, 4px);
 }
 
 .digits .ghost,
@@ -278,7 +290,7 @@ html, body, .container, .main { overflow-x: hidden; }
   }
 
   .digits {
-    font-size: var(--digit-size, clamp(7rem, 36vw, 24rem));
+    font-size: var(--digit-size, clamp(7rem, 42vw, 28rem));
     overflow-x: hidden;
   }
 
@@ -323,7 +335,6 @@ html, body, .container, .main { overflow-x: hidden; }
   /* Compact preset badge on mobile */
   .preset-badge {
     font-size: 11px;
-    padding: 6px 10px;
     max-width: 140px;
   }
 

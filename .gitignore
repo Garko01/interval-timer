@@ -1,3 +1,6 @@
+# Owner / Admin
+.owner/
+
 # Logs
 logs
 *.log

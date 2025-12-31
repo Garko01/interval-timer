@@ -60,6 +60,14 @@ function getRoundForIndex(schedule: IntervalDef[], idx: number, s: Settings) {
   return round
 }
 
+function calculateTotalRemaining(schedule: IntervalDef[], currentIdx: number, currentRemaining: number) {
+  let total = currentRemaining
+  for (let i = currentIdx + 1; i < schedule.length; i++) {
+    total += schedule[i].seconds
+  }
+  return total
+}
+
 // Auto-fit digits with exact pixel padding so we never overflow the viewport.
 function useAutoFitDigits(config?: { sidePadEachVW?: number }) {
   // visual margin per side (in vw units)
@@ -109,7 +117,7 @@ function useAutoFitDigits(config?: { sidePadEachVW?: number }) {
 
         // symmetric side padding in *pixels* (a bit smaller on tiny phones)
         const padPx =
-          Math.round((containerW * (vw < 420 ? 0.025 : 0.035))) + 2; // +2px safety
+          Math.round((containerW * (vw < 420 ? 0.015 : 0.02))) + 1; // +1px safety
 
         // expose it to CSS so both sides are *exactly* equal
         el.style.setProperty('--digits-pad', `${padPx}px`);
@@ -137,16 +145,16 @@ function useAutoFitDigits(config?: { sidePadEachVW?: number }) {
       }
 
       // ===== TABLET / DESKTOP (keep larger look) =====
-      const sidePadVW = isDesktop ? 1.5 : isTablet ? 2.0 : 3.0;
+      const sidePadVW = isDesktop ? 0.8 : isTablet ? 1.2 : 1.5;
       const padPx = (sidePadVW / 100) * vw;
       el.style.paddingLeft  = `${padPx}px`;
       el.style.paddingRight = `${padPx}px`;
 
       const usableW   = Math.max(1, vw - padPx * 2);
       const sizeFromW = (100 * usableW * 0.99) / ghostW100; // tiny margin
-      const sizeFromH = isDesktop ? vh * 0.62 : isTablet ? vh * 0.52 : vh * 0.46;
+      const sizeFromH = isDesktop ? vh * 0.68 : isTablet ? vh * 0.58 : vh * 0.50;
 
-      const hardCap = isDesktop ? 960 : 780;
+      const hardCap = isDesktop ? 1120 : 920;
       const sizePx = Math.max(48, Math.min(sizeFromW, sizeFromH, hardCap));
       el.style.setProperty('--digit-size', `${Math.round(sizePx)}px`);
     });
@@ -642,6 +650,12 @@ export default function App() {
           </div>
         </div>
       )}
+
+      <div className="float-tc">
+        <div className="total-time">
+          {formatMMSS(Math.ceil(calculateTotalRemaining(schedule, idx, remaining)))}
+        </div>
+      </div>
 
       <div className="float-tr">
         <button
